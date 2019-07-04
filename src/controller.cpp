@@ -3,9 +3,16 @@
 #include "pr_physx/shape.hpp"
 #include <pragma/networkstate/networkstate.h>
 
+pragma::physics::PxController &pragma::physics::PxController::GetController(IController &c)
+{
+	return *static_cast<PxController*>(c.userData);
+}
+const pragma::physics::PxController &pragma::physics::PxController::GetController(const IController &o) {return GetController(const_cast<IController&>(o));}
 pragma::physics::PxController::PxController(IEnvironment &env,PxUniquePtr<physx::PxController> controller,const util::TSharedHandle<ICollisionObject> &collisionObject)
 	: IController{env,collisionObject},m_controller{std::move(controller)}
-{}
+{
+	userData = this;
+}
 pragma::physics::PxEnvironment &pragma::physics::PxController::GetPxEnv() const {return static_cast<PxEnvironment&>(m_physEnv);}
 physx::PxController &pragma::physics::PxController::GetInternalObject() const {return *m_controller;}
 pragma::physics::IController::CollisionFlags pragma::physics::PxController::DoMove(Vector3 &disp)

@@ -21,6 +21,8 @@ namespace pragma::physics
 	{
 	public:
 		friend IEnvironment;
+		static PxConstraint &GetConstraint(IConstraint &c);
+		static const PxConstraint &GetConstraint(const IConstraint &c);
 		physx::PxJoint &GetInternalObject() const;
 
 		virtual void Initialize() override;

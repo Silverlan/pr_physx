@@ -17,6 +17,8 @@ namespace pragma::physics
 	{
 	public:
 		friend IEnvironment;
+		static PxCollisionObject &GetCollisionObject(ICollisionObject &o);
+		static const PxCollisionObject &GetCollisionObject(const ICollisionObject &o);
 		PxCollisionObject(IEnvironment &env,PxUniquePtr<physx::PxActor> actor,IShape &shape);
 		physx::PxActor &GetInternalObject() const;
 		virtual void GetAABB(Vector3 &min,Vector3 &max) const override;

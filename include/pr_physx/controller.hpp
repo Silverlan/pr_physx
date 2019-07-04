@@ -17,6 +17,8 @@ namespace pragma::physics
 	{
 	public:
 		friend IEnvironment;
+		static PxController &GetController(IController &c);
+		static const PxController &GetController(const IController &c);
 		physx::PxController &GetInternalObject() const;
 
 		virtual CollisionFlags DoMove(Vector3 &disp) override;

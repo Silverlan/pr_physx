@@ -15,6 +15,8 @@ namespace physx
 	class PxVec3;
 	class PxTransform;
 	class PxRaycastHit;
+	class PxOverlapHit;
+	class PxSweepHit;
 	class PxRigidActor;
 	class PxControllerDesc;
 };
@@ -37,7 +39,6 @@ namespace pragma::physics
 		static physx::PxTransform CreatePxTransform(const Transform &btTransform);
 		static PxCollisionObject *GetCollisionObject(const physx::PxRigidActor &actor);
 		static PxShape *GetShape(const physx::PxShape &shape);
-
 
 		bool Initialize();
 
@@ -91,7 +92,7 @@ namespace pragma::physics
 
 		virtual Bool Overlap(const TraceData &data,std::vector<TraceResult> *optOutResults=nullptr) const override;
 		virtual Bool RayCast(const TraceData &data,std::vector<TraceResult> *optOutResults=nullptr) const override;
-		virtual Bool Sweep(const TraceData &data,TraceResult *optOutResult=nullptr) const override;
+		virtual Bool Sweep(const TraceData &data,std::vector<TraceResult> *optOutResults=nullptr) const override;
 
 		template<class T,typename... TARGS>
 			PxUniquePtr<T> CreateUniquePtr(TARGS&& ...args);
@@ -101,6 +102,8 @@ namespace pragma::physics
 		void InitializeShape(PxShape &shape,bool basicOnly=false);
 		void InitializeCollisionObject(PxCollisionObject &o);
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxRaycastHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
+		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxOverlapHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
+		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxSweepHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
 		void InitializeControllerDesc(physx::PxControllerDesc &inOutDesc,float stepHeight,float slopeLimitDeg,const Transform &startTransform);
 
 		PxUniquePtr<physx::PxPhysics> m_physics = px_null_ptr<physx::PxPhysics>();

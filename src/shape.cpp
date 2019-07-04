@@ -2,9 +2,16 @@
 #include "pr_physx/environment.hpp"
 #include <PxShape.h>
 
+pragma::physics::PxShape &pragma::physics::PxShape::GetShape(IShape &s)
+{
+	return *static_cast<PxShape*>(s.userData);
+}
+const pragma::physics::PxShape &pragma::physics::PxShape::GetShape(const IShape &o) {return GetShape(const_cast<IShape&>(o));}
 pragma::physics::PxShape::PxShape(IEnvironment &env,PxUniquePtr<physx::PxShape> shape,PxUniquePtr<physx::PxGeometry> geometry)
 	: IShape{env},m_geometry{std::move(geometry)},m_shape{std::move(shape)}
-{}
+{
+	userData = this;
+}
 
 const physx::PxShape &pragma::physics::PxShape::GetInternalObject() const {return *m_shape;}
 physx::PxShape &pragma::physics::PxShape::GetInternalObject() {return *m_shape;}

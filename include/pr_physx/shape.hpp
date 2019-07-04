@@ -19,6 +19,8 @@ namespace pragma::physics
 	public:
 		friend PxEnvironment;
 		friend IEnvironment;
+		static PxShape &GetShape(IShape &s);
+		static const PxShape &GetShape(const IShape &s);
 
 		const physx::PxShape &GetInternalObject() const;
 		physx::PxShape &GetInternalObject();

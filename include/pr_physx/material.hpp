@@ -17,6 +17,8 @@ namespace pragma::physics
 	{
 	public:
 		friend PxEnvironment;
+		static PxMaterial &GetMaterial(IMaterial &o);
+		static const PxMaterial &GetMaterial(const IMaterial &o);
 		PxMaterial(IEnvironment &env,PxUniquePtr<physx::PxMaterial> material);
 		const physx::PxMaterial &GetPxMaterial() const;
 		physx::PxMaterial &GetPxMaterial();

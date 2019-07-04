@@ -4,9 +4,16 @@
 #include <extensions/PxRigidBodyExt.h>
 
 #pragma optimize("",off)
+pragma::physics::PxCollisionObject &pragma::physics::PxCollisionObject::GetCollisionObject(ICollisionObject &o)
+{
+	return *static_cast<PxCollisionObject*>(o.userData);
+}
+const pragma::physics::PxCollisionObject &pragma::physics::PxCollisionObject::GetCollisionObject(const ICollisionObject &o) {return GetCollisionObject(const_cast<ICollisionObject&>(o));}
 pragma::physics::PxCollisionObject::PxCollisionObject(IEnvironment &env,PxUniquePtr<physx::PxActor> actor,IShape &shape)
 	: ICollisionObject{env,shape},m_actor{std::move(actor)}
-{}
+{
+	userData = this;
+}
 physx::PxActor &pragma::physics::PxCollisionObject::GetInternalObject() const {return *m_actor;}
 pragma::physics::PxEnvironment &pragma::physics::PxCollisionObject::GetPxEnv() const {return static_cast<PxEnvironment&>(m_physEnv);}
 void pragma::physics::PxCollisionObject::GetAABB(Vector3 &min,Vector3 &max) const

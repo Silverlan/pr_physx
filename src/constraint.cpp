@@ -1,9 +1,16 @@
 #include "pr_physx/constraint.hpp"
 #include "pr_physx/environment.hpp"
 
+pragma::physics::PxConstraint &pragma::physics::PxConstraint::GetConstraint(IConstraint &c)
+{
+	return *static_cast<PxConstraint*>(c.userData);
+}
+const pragma::physics::PxConstraint &pragma::physics::PxConstraint::GetConstraint(const IConstraint &o) {return GetConstraint(const_cast<IConstraint&>(o));}
 pragma::physics::PxConstraint::PxConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> joint)
 	: IConstraint{env},m_joint{std::move(joint)}
-{}
+{
+	userData = this;
+}
 physx::PxJoint &pragma::physics::PxConstraint::GetInternalObject() const {return *m_joint;}
 pragma::physics::PxEnvironment &pragma::physics::PxConstraint::GetPxEnv() const {return static_cast<PxEnvironment&>(m_physEnv);}
 void pragma::physics::PxConstraint::DoSetCollisionsEnabled(Bool b)
