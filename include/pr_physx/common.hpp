@@ -16,10 +16,6 @@ namespace pragma::physics
 				return px_null_ptr<T>();
 			return PxUniquePtr<T>{v,[](T *v) {if(v) v->release();}};
 		}
-	template<class TSrc,class TDst>
-		static PxUniquePtr<TDst> px_cast_unique_ptr(PxUniquePtr<TSrc> ptr) {
-			return px_create_unique_ptr<TDst>(ptr.release());
-		}
 };
 
 namespace uvec

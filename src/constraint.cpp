@@ -3,21 +3,24 @@
 
 pragma::physics::PxConstraint &pragma::physics::PxConstraint::GetConstraint(IConstraint &c)
 {
-	return *static_cast<PxConstraint*>(c.userData);
+	return *static_cast<PxConstraint*>(c.GetUserData());
 }
 const pragma::physics::PxConstraint &pragma::physics::PxConstraint::GetConstraint(const IConstraint &o) {return GetConstraint(const_cast<IConstraint&>(o));}
 pragma::physics::PxConstraint::PxConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> joint)
 	: IConstraint{env},m_joint{std::move(joint)}
 {
-	userData = this;
+	SetUserData(this);
 }
+void pragma::physics::PxConstraint::Initialize()
+{
+	IConstraint::Initialize();
+	GetInternalObject().userData = this;
+}
+void pragma::physics::PxConstraint::RemoveWorldObject() {}
+void pragma::physics::PxConstraint::DoAddWorldObject() {}
 physx::PxJoint &pragma::physics::PxConstraint::GetInternalObject() const {return *m_joint;}
 pragma::physics::PxEnvironment &pragma::physics::PxConstraint::GetPxEnv() const {return static_cast<PxEnvironment&>(m_physEnv);}
 void pragma::physics::PxConstraint::DoSetCollisionsEnabled(Bool b)
-{
-	// TODO
-}
-void pragma::physics::PxConstraint::Initialize()
 {
 	// TODO
 }
@@ -70,32 +73,32 @@ void pragma::physics::PxConstraint::SetBreakingImpulseThreshold(float threshold)
 
 /////////////
 
-pragma::physics::PxFixedConstraint::PxFixedConstraint(IEnvironment &env,PxUniquePtr<physx::PxFixedJoint> c)
-	: IFixedConstraint{env},PxConstraint{env,px_cast_unique_ptr<physx::PxFixedJoint,physx::PxJoint>(std::move(c))},IConstraint{env}
+pragma::physics::PxFixedConstraint::PxFixedConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
+	: IFixedConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
 {}
 
 /////////////
 
-pragma::physics::PxBallSocketConstraint::PxBallSocketConstraint(IEnvironment &env,PxUniquePtr<physx::PxSphericalJoint> c)
-	: IBallSocketConstraint{env},PxConstraint{env,px_cast_unique_ptr<physx::PxSphericalJoint,physx::PxJoint>(std::move(c))},IConstraint{env}
+pragma::physics::PxBallSocketConstraint::PxBallSocketConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
+	: IBallSocketConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
 {}
 
 /////////////
 
-pragma::physics::PxHingeConstraint::PxHingeConstraint(IEnvironment &env,PxUniquePtr<physx::PxRevoluteJoint> c)
-	: IHingeConstraint{env},PxConstraint{env,px_cast_unique_ptr<physx::PxRevoluteJoint,physx::PxJoint>(std::move(c))},IConstraint{env}
+pragma::physics::PxHingeConstraint::PxHingeConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
+	: IHingeConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
 {}
 
 /////////////
 
-pragma::physics::PxSliderConstraint::PxSliderConstraint(IEnvironment &env,PxUniquePtr<physx::PxPrismaticJoint> c)
-	: ISliderConstraint{env},PxConstraint{env,px_cast_unique_ptr<physx::PxPrismaticJoint,physx::PxJoint>(std::move(c))},IConstraint{env}
+pragma::physics::PxSliderConstraint::PxSliderConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
+	: ISliderConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
 {}
 
 /////////////
 
-pragma::physics::PxConeTwistConstraint::PxConeTwistConstraint(IEnvironment &env,PxUniquePtr<physx::PxSphericalJoint> c)
-	: IConeTwistConstraint{env},PxConstraint{env,px_cast_unique_ptr<physx::PxSphericalJoint,physx::PxJoint>(std::move(c))},IConstraint{env}
+pragma::physics::PxConeTwistConstraint::PxConeTwistConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
+	: IConeTwistConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
 {}
 void pragma::physics::PxConeTwistConstraint::SetLimit(float swingSpan1,float swingSpan2,float twistSpan,float softness,float biasFactor,float relaxationFactor)
 {
@@ -104,8 +107,8 @@ void pragma::physics::PxConeTwistConstraint::SetLimit(float swingSpan1,float swi
 
 /////////////
 
-pragma::physics::PxDoFConstraint::PxDoFConstraint(IEnvironment &env,PxUniquePtr<physx::PxD6Joint> c)
-	: IDoFConstraint{env},PxConstraint{env,px_cast_unique_ptr<physx::PxD6Joint,physx::PxJoint>(std::move(c))},IConstraint{env}
+pragma::physics::PxDoFConstraint::PxDoFConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
+	: IDoFConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
 {}
 void pragma::physics::PxDoFConstraint::SetLinearLimit(const Vector3 &lower,const Vector3 &upper)
 {
@@ -376,8 +379,8 @@ Vector3 pragma::physics::PxDoFConstraint::GetCurrentLinearAccumulatedImpulse() c
 
 /////////////
 
-pragma::physics::PxDoFSpringConstraint::PxDoFSpringConstraint(IEnvironment &env,PxUniquePtr<physx::PxD6Joint> c)
-	: IDoFSpringConstraint{env},PxConstraint{env,px_cast_unique_ptr<physx::PxD6Joint,physx::PxJoint>(std::move(c))},IConstraint{env}
+pragma::physics::PxDoFSpringConstraint::PxDoFSpringConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
+	: IDoFSpringConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
 {}
 void pragma::physics::PxDoFSpringConstraint::CalculateTransforms()
 {

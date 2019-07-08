@@ -16,8 +16,23 @@ namespace pragma::physics
 		static const PxVehicle &GetVehicle(const IVehicle &v);
 	private:
 		PxVehicle(IEnvironment &env,PxUniquePtr<physx::PxVehicleDrive> vhc);
+		virtual void Initialize() override;
+		virtual void RemoveWorldObject() override;
+		virtual void DoAddWorldObject() override;
 		PxEnvironment &GetPxEnv() const;
 		PxUniquePtr<physx::PxVehicleDrive> m_vehicle = px_null_ptr<physx::PxVehicleDrive>();
+	};
+
+	class PxWheel
+		: public IWheel
+	{
+	public:
+		static PxWheel &GetWheel(IWheel &w);
+		static const PxWheel &GetWheel(const IWheel &w);
+	private:
+		PxWheel(IEnvironment &env);
+		virtual void Initialize() override;
+		PxEnvironment &GetPxEnv() const;
 	};
 };
 

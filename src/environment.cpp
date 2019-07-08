@@ -5,14 +5,16 @@
 #include "pr_physx/constraint.hpp"
 #include "pr_physx/controller.hpp"
 #include "pr_physx/material.hpp"
-#include "pr_physx/debug.hpp"
 #include "pr_physx/raycast.hpp"
 #include <sharedutils/util.h>
+#include <pragma/math/surfacematerial.h>
 #include <pragma/physics/transform.hpp>
+#include <pragma/physics/visual_debugger.hpp>
 #include <pragma/entities/baseentity.h>
+#include <pragma/util/util_game.hpp>
+#include <pragma/networkstate/networkstate.h>
 #include <PxPhysicsAPI.h>
 #include <PxFoundation.h>
-#include <vehicle/PxVehicleSDK.h>
 #ifdef _WIN32
 #include <common/windows/PxWindowsDelayLoadHook.h>
 #endif
@@ -34,6 +36,14 @@ pragma::physics::PxShape *pragma::physics::PxEnvironment::GetShape(const physx::
 {
 	return static_cast<pragma::physics::PxShape*>(shape.userData);
 }
+pragma::physics::PxController *pragma::physics::PxEnvironment::GetController(const physx::PxController &controller)
+{
+	return static_cast<pragma::physics::PxController*>(controller.getUserData());
+}
+pragma::physics::PxMaterial *pragma::physics::PxEnvironment::GetMaterial(const physx::PxMaterial &material)
+{
+	return static_cast<pragma::physics::PxMaterial*>(material.userData);
+}
 pragma::physics::PxEnvironment::PxEnvironment(NetworkState &state)
 	: IEnvironment{state}
 {}
@@ -41,11 +51,36 @@ pragma::physics::PxEnvironment::~PxEnvironment()
 {
 	m_cooking = nullptr;
 	m_scene = nullptr;
-	m_physics = nullptr;
-	m_pvd = nullptr;
 }
 
-static physx::PxDefaultErrorCallback gDefaultErrorCallback {};
+class PhysXErrorCallback
+	: public physx::PxErrorCallback
+{
+public:
+	virtual void reportError(physx::PxErrorCode::Enum code, const char* message, const char* file,int line) override
+	{
+		switch(code)
+		{
+		case physx::PxErrorCode::eDEBUG_INFO:
+		{
+			Con::cout<<"[PhysX] Debug Info in file '"<<file<<":"<<line<<"': "<<message<<Con::endl;
+			break;
+		}
+		case physx::PxErrorCode::eDEBUG_WARNING:
+		{
+			Con::cwar<<"[PhysX] Warning in file '"<<file<<":"<<line<<"': "<<message<<Con::endl;
+			break;
+		}
+		default:
+		{
+			Con::cerr<<"[PhysX] Error in file '"<<file<<":"<<line<<"': "<<message<<Con::endl;
+			break;
+		}
+		}
+	}
+};
+
+static PhysXErrorCallback gDefaultErrorCallback {};
 static physx::PxDefaultAllocator gDefaultAllocatorCallback {};
 
 extern "C"
@@ -78,12 +113,142 @@ class PxDelayLoadHook
 
 static uint32_t g_instances = 0;
 static pragma::physics::PxUniquePtr<physx::PxFoundation> g_pxFoundation = pragma::physics::px_null_ptr<physx::PxFoundation>();
+static pragma::physics::PxUniquePtr<physx::PxPhysics> g_pxPhysics = pragma::physics::px_null_ptr<physx::PxPhysics>();
+static pragma::physics::PxUniquePtr<physx::PxPvd> g_pxPvd = pragma::physics::px_null_ptr<physx::PxPvd>();
+physx::PxFoundation &pragma::physics::PxEnvironment::GetFoundation() {return *g_pxFoundation;}
+physx::PxPhysics &pragma::physics::PxEnvironment::GetPhysics() {return *g_pxPhysics;}
+physx::PxPvd &pragma::physics::PxEnvironment::GetPVD() {return *g_pxPvd;}
 extern "C"
 {
 	PRAGMA_EXPORT bool pragma_attach(std::string&)
 	{
 		if(g_instances++ > 0)
 			return true;
+		return true;
+	}
+	PRAGMA_EXPORT void pragma_detach()
+	{
+		if(--g_instances > 0 || g_pxFoundation == nullptr)
+			return;
+		PxCloseExtensions();
+		physx::PxCloseVehicleSDK();
+		g_pxPhysics = nullptr;
+		g_pxPvd = nullptr;
+		g_pxFoundation = nullptr;
+	}
+};
+
+physx::PxFilterFlags testtt(
+	physx::PxFilterObjectAttributes attributes0,
+	physx::PxFilterData filterData0, 
+	physx::PxFilterObjectAttributes attributes1,
+	physx::PxFilterData filterData1,
+	physx::PxPairFlags& pairFlags,
+	const void* constantBlock,
+	physx::PxU32 constantBlockSize)
+{
+	return physx::PxFilterFlag::eKILL;
+}
+
+class FilterCallback
+	: public physx::PxSimulationFilterCallback
+{
+public:
+
+	/**
+	\brief Filter method to specify how a pair of potentially colliding objects should be processed.
+
+	This method gets called when the filter flags returned by the filter shader (see #PxSimulationFilterShader)
+	indicate that the filter callback should be invoked (#PxFilterFlag::eCALLBACK or #PxFilterFlag::eNOTIFY set).
+	Return the PxFilterFlag flags and set the PxPairFlag flags to define what the simulation should do with the given 
+	collision pair.
+
+	\param[in] pairID Unique ID of the collision pair used to issue filter status changes for the pair (see #statusChange())
+	\param[in] attributes0 The filter attribute of the first object
+	\param[in] filterData0 The custom filter data of the first object
+	\param[in] a0 Actor pointer of the first object
+	\param[in] s0 Shape pointer of the first object (NULL if the object has no shapes)
+	\param[in] attributes1 The filter attribute of the second object
+	\param[in] filterData1 The custom filter data of the second object
+	\param[in] a1 Actor pointer of the second object
+	\param[in] s1 Shape pointer of the second object (NULL if the object has no shapes)
+	\param[in,out] pairFlags In: Pair flags returned by the filter shader. Out: Additional information on how an accepted pair should get processed
+	\return Filter flags defining whether the pair should be discarded, temporarily ignored or processed and whether the pair
+	should be tracked and send a report on pair deletion through the filter callback
+
+	@see PxSimulationFilterShader PxFilterData PxFilterObjectAttributes PxFilterFlag PxPairFlag
+	*/
+	virtual		physx::PxFilterFlags	pairFound(	physx::PxU32 pairID,
+		physx::PxFilterObjectAttributes attributes0, physx::PxFilterData filterData0, const physx::PxActor* a0, const physx::PxShape* s0,
+		physx::PxFilterObjectAttributes attributes1, physx::PxFilterData filterData1, const physx::PxActor* a1, const physx::PxShape* s1,
+		physx::PxPairFlags& pairFlags) override
+	{
+		return physx::PxFilterFlag::eKILL;
+	}
+
+	/**
+	\brief Callback to inform that a tracked collision pair is gone.
+
+	This method gets called when a collision pair disappears or gets re-filtered. Only applies to
+	collision pairs which have been marked as filter callback pairs (#PxFilterFlag::eNOTIFY set in #pairFound()).
+
+	\param[in] pairID Unique ID of the collision pair that disappeared
+	\param[in] attributes0 The filter attribute of the first object
+	\param[in] filterData0 The custom filter data of the first object
+	\param[in] attributes1 The filter attribute of the second object
+	\param[in] filterData1 The custom filter data of the second object
+	\param[in] objectRemoved True if the pair was lost because one of the objects got removed from the scene
+
+	@see pairFound() PxSimulationFilterShader PxFilterData PxFilterObjectAttributes
+	*/
+	virtual		void			pairLost(	physx::PxU32 pairID,
+		physx::PxFilterObjectAttributes attributes0,
+		physx::PxFilterData filterData0,
+		physx::PxFilterObjectAttributes attributes1,
+		physx::PxFilterData filterData1,
+		bool objectRemoved) override
+	{
+
+	}
+
+	/**
+	\brief Callback to give the opportunity to change the filter state of a tracked collision pair.
+
+	This method gets called once per simulation step to let the application change the filter and pair
+	flags of a collision pair that has been reported in #pairFound() and requested callbacks by
+	setting #PxFilterFlag::eNOTIFY. To request a change of filter status, the target pair has to be
+	specified by its ID, the new filter and pair flags have to be provided and the method should return true.
+
+	\note If this method changes the filter status of a collision pair and the pair should keep being tracked
+	by the filter callbacks then #PxFilterFlag::eNOTIFY has to be set.
+
+	\note The application is responsible to ensure that this method does not get called for pairs that have been
+	reported as lost, see #pairLost().
+
+	\param[out] pairID ID of the collision pair for which the filter status should be changed
+	\param[out] pairFlags The new pairFlags to apply to the collision pair
+	\param[out] filterFlags The new filterFlags to apply to the collision pair
+	\return True if the changes should be applied. In this case the method will get called again. False if
+	no more status changes should be done in the current simulation step. In that case the provided flags will be discarded.
+
+	@see pairFound() pairLost() PxFilterFlag PxPairFlag
+	*/
+	virtual		bool			statusChange(physx::PxU32& pairID, physx::PxPairFlags& pairFlags, physx::PxFilterFlags& filterFlags) override
+	{
+		return false;
+	}
+
+protected:
+	virtual						~FilterCallback() override
+	{
+
+	}
+};
+
+bool pragma::physics::PxEnvironment::Initialize()
+{
+	if(g_pxFoundation == nullptr)
+	{
 #ifdef _WIN32
 		PxSetPhysXDelayLoadHook(&g_DelayLoadHook);
 		PxSetPhysXCookingDelayLoadHook(&g_DelayLoadHook);
@@ -93,38 +258,63 @@ extern "C"
 			if(pFoundation)
 				pFoundation->release();
 		}};
-		return true;
 	}
-	PRAGMA_EXPORT void pragma_detach()
-	{
-		if(--g_instances > 0)
-			return;
-		PxCloseExtensions();
-		physx::PxCloseVehicleSDK();
-		g_pxFoundation = nullptr;
-	}
-};
 
-bool pragma::physics::PxEnvironment::Initialize()
-{
 	if(g_pxFoundation == nullptr)
 		return false;
-	m_pvd = px_create_unique_ptr(physx::PxCreatePvd(*g_pxFoundation));
-	if(m_pvd == nullptr)
-		return false;
-	auto *pTransport = physx::PxDefaultPvdSocketTransportCreate("127.0.0.1",5425,10);
-	m_pvd->connect(*pTransport,physx::PxPvdInstrumentationFlag::eALL);
+	if(g_pxPvd == nullptr)
+	{
+		g_pxPvd = px_create_unique_ptr(physx::PxCreatePvd(*g_pxFoundation));
+		if(g_pxPvd == nullptr)
+			return false;
+		auto *pTransport = physx::PxDefaultPvdSocketTransportCreate("127.0.0.1",5425,10);
+		g_pxPvd->connect(*pTransport,physx::PxPvdInstrumentationFlag::eALL);
+	}
+	auto bEnableDebugging = g_pxPvd != nullptr;
 
 	physx::PxTolerancesScale scale;
-	scale.length = 100;        // typical length of an object
-	scale.speed = 981;         // typical speed of an object, gravity*1s is a reasonable choice
-	m_physics = px_create_unique_ptr(PxCreatePhysics(PX_PHYSICS_VERSION,*g_pxFoundation,scale));
-	if(m_physics == nullptr)
-		return false;
+	scale.length = util::metres_to_units(1);
+	scale.speed = 600.f;
+	if(g_pxPhysics == nullptr)
+	{
+		g_pxPhysics = px_create_unique_ptr(PxCreatePhysics(PX_PHYSICS_VERSION,*g_pxFoundation,scale,bEnableDebugging,g_pxPvd.get()));
+		if(g_pxPhysics == nullptr)
+			return false;
+	}
 
+	m_cpuDispatcher = px_create_unique_ptr(physx::PxDefaultCpuDispatcherCreate(6)); // TODO: Should match number of available hardware threads
+	if(m_cpuDispatcher == nullptr)
+		return false;
 	physx::PxSceneDesc sceneDesc {scale};
-	// TODO: Scene settings!
-	m_scene = px_create_unique_ptr(m_physics->createScene(sceneDesc));
+	sceneDesc.gravity = {0.f,0.f,0.f};
+	sceneDesc.simulationEventCallback = nullptr;
+	sceneDesc.filterShader = testtt;//physx::PxDefaultSimulationFilterShader;
+	physx::PxSimulationFilterCallback;
+	sceneDesc.filterCallback = new FilterCallback{};//nullptr;
+	sceneDesc.kineKineFilteringMode = physx::PxPairFilteringMode::eDEFAULT;
+	sceneDesc.staticKineFilteringMode = physx::PxPairFilteringMode::eDEFAULT;
+	sceneDesc.broadPhaseType = physx::PxBroadPhaseType::eABP;
+	sceneDesc.broadPhaseCallback = nullptr;
+	sceneDesc.limits.setToDefault();
+	sceneDesc.limits.maxNbActors = 131'072;
+	sceneDesc.limits.maxNbAggregates = 256; // Unsure what this is for
+	sceneDesc.limits.maxNbBodies = 32'768;
+	sceneDesc.limits.maxNbBroadPhaseOverlaps = 256; // Unsure what this is for
+	sceneDesc.limits.maxNbConstraints = 4'096;
+	sceneDesc.limits.maxNbDynamicShapes = 16'384;
+	sceneDesc.limits.maxNbRegions = 256; // Unsure what this is for
+	sceneDesc.limits.maxNbStaticShapes = 65'536;
+	sceneDesc.frictionType = physx::PxFrictionType::ePATCH;
+	sceneDesc.solverType = physx::PxSolverType::ePGS;
+	sceneDesc.cpuDispatcher = m_cpuDispatcher.get();
+
+	// sceneDesc.bounceThresholdVelocity // TODO
+	// sceneDesc.frictionOffsetThreshold; // TODO
+	// sceneDesc.ccdMaxSeparation; // TODO
+	sceneDesc.solverOffsetSlop = 0.0;
+	sceneDesc.flags = physx::PxSceneFlag::eENABLE_CCD;
+
+	m_scene = px_create_unique_ptr(g_pxPhysics->createScene(sceneDesc));
 	if(m_scene == nullptr)
 		return false;
 	m_scene->setGravity({0.f,0.f,0.f});
@@ -136,15 +326,28 @@ bool pragma::physics::PxEnvironment::Initialize()
 	if(m_controllerManager == nullptr)
 		return false;
 	m_controllerManager->setOverlapRecoveryModule(true);
-	if(PxInitExtensions(*m_physics,m_pvd.get()) == false || physx::PxInitVehicleSDK(*m_physics) == false)
+	m_controllerManager->setDebugRenderingFlags(physx::PxControllerDebugRenderFlag::eALL);
+	if(PxInitExtensions(*g_pxPhysics,g_pxPvd.get()) == false || physx::PxInitVehicleSDK(*g_pxPhysics) == false)
 		return false;
 	physx::PxVehicleSetBasisVectors(ToPhysXNormal(uvec::UP),ToPhysXNormal(uvec::FORWARD));
 	physx::PxVehicleSetUpdateMode(physx::PxVehicleUpdateMode::eVELOCITY_CHANGE);
-	return true;
+
+	m_controllerBehaviorCallback = std::make_unique<CustomControllerBehaviorCallback>();
+	m_controllerHitReport = std::make_unique<CustomUserControllerHitReport>();
+
+	return IEnvironment::Initialize();
 }
 physx::PxVec3 pragma::physics::PxEnvironment::ToPhysXVector(const Vector3 &v) const
 {
 	return physx::PxVec3{v.x,v.y,v.z};
+}
+physx::PxExtendedVec3 pragma::physics::PxEnvironment::ToPhysXExtendedVector(const Vector3 &v) const
+{
+	return physx::PxExtendedVec3{v.x,v.y,v.z};
+}
+Vector3 pragma::physics::PxEnvironment::FromPhysXVector(const physx::PxExtendedVec3 &v) const
+{
+	return Vector3{static_cast<float>(v.x),static_cast<float>(v.y),static_cast<float>(v.z)};
 }
 physx::PxVec3 pragma::physics::PxEnvironment::ToPhysXNormal(const Vector3 &n) const
 {
@@ -175,368 +378,56 @@ Quat pragma::physics::PxEnvironment::FromPhysXRotation(const physx::PxQuat &v) c
 	return Quat{v.w,v.x,v.y,v.z};
 }
 pragma::physics::PxRigidBody &pragma::physics::PxEnvironment::ToBtType(IRigidBody &body) {return dynamic_cast<PxRigidBody&>(body);}
-pragma::physics::IVisualDebugger *pragma::physics::PxEnvironment::InitializeVisualDebugger()
-{
-	auto visDebugger = std::make_shared<PxVisualDebugger>();
-	m_visualDebugger = visDebugger;
-	return m_visualDebugger.get();
-}
 physx::PxScene &pragma::physics::PxEnvironment::GetScene() const {return *m_scene;}
 double pragma::physics::PxEnvironment::ToPhysXLength(double len) const {return len;}
 double pragma::physics::PxEnvironment::FromPhysXLength(double len) const {return len;}
-util::TSharedHandle<pragma::physics::IFixedConstraint> pragma::physics::PxEnvironment::CreateFixedConstraint(IRigidBody &a,const Vector3 &pivotA,const Quat &rotA,IRigidBody &b,const Vector3 &pivotB,const Quat &rotB)
+
+const Color &pragma::physics::PxEnvironment::FromPhysXColor(uint32_t color)
 {
-	physx::PxTransform tA {uvec::create_px(pivotA),uquat::create_px(rotA)};
-	physx::PxTransform tB {uvec::create_px(pivotB),uquat::create_px(rotB)};
-	auto fixedJoint = px_create_unique_ptr(physx::PxFixedJointCreate(*m_physics,&ToBtType(a).GetInternalObject(),tA,&ToBtType(b).GetInternalObject(),tB));
-	return util::shared_handle_cast<PxFixedConstraint,IFixedConstraint>(CreateSharedHandle<PxFixedConstraint>(*this,std::move(fixedJoint)));
-}
-util::TSharedHandle<pragma::physics::IBallSocketConstraint> pragma::physics::PxEnvironment::CreateBallSocketConstraint(IRigidBody &a,const Vector3 &pivotA,IRigidBody &b,const Vector3 &pivotB)
-{
-	physx::PxTransform tA {uvec::create_px(pivotA)};
-	physx::PxTransform tB {uvec::create_px(pivotB)};
-	auto sphericalJoint = px_create_unique_ptr(physx::PxSphericalJointCreate(*m_physics,&ToBtType(a).GetInternalObject(),tA,&ToBtType(b).GetInternalObject(),tB));
-	return util::shared_handle_cast<PxBallSocketConstraint,IBallSocketConstraint>(CreateSharedHandle<PxBallSocketConstraint>(*this,std::move(sphericalJoint)));
-}
-util::TSharedHandle<pragma::physics::IHingeConstraint> pragma::physics::PxEnvironment::CreateHingeConstraint(IRigidBody &a,const Vector3 &pivotA,IRigidBody &b,const Vector3 &pivotB,const Vector3 &axis)
-{
-	physx::PxTransform tA {uvec::create_px(pivotA)};
-	physx::PxTransform tB {uvec::create_px(pivotB)};
-	auto hingeJoint = px_create_unique_ptr(physx::PxRevoluteJointCreate(*m_physics,&ToBtType(a).GetInternalObject(),tA,&ToBtType(b).GetInternalObject(),tB));
-	// TODO: Specify axis?
-	return util::shared_handle_cast<PxHingeConstraint,IHingeConstraint>(CreateSharedHandle<PxHingeConstraint>(*this,std::move(hingeJoint)));
-}
-util::TSharedHandle<pragma::physics::ISliderConstraint> pragma::physics::PxEnvironment::CreateSliderConstraint(IRigidBody &a,const Vector3 &pivotA,const Quat &rotA,IRigidBody &b,const Vector3 &pivotB,const Quat &rotB)
-{
-	physx::PxTransform tA {uvec::create_px(pivotA),uquat::create_px(rotA)};
-	physx::PxTransform tB {uvec::create_px(pivotB),uquat::create_px(rotB)};
-	auto prismaticJoint = px_create_unique_ptr(physx::PxPrismaticJointCreate(*m_physics,&ToBtType(a).GetInternalObject(),tA,&ToBtType(b).GetInternalObject(),tB));
-	return util::shared_handle_cast<PxSliderConstraint,ISliderConstraint>(CreateSharedHandle<PxSliderConstraint>(*this,std::move(prismaticJoint)));
-}
-util::TSharedHandle<pragma::physics::IConeTwistConstraint> pragma::physics::PxEnvironment::CreateConeTwistConstraint(IRigidBody &a,const Vector3 &pivotA,const Quat &rotA,IRigidBody &b,const Vector3 &pivotB,const Quat &rotB)
-{
-	physx::PxTransform tA {uvec::create_px(pivotA),uquat::create_px(rotA)};
-	physx::PxTransform tB {uvec::create_px(pivotB),uquat::create_px(rotB)};
-	auto sphericalJoint = px_create_unique_ptr(physx::PxSphericalJointCreate(*m_physics,&ToBtType(a).GetInternalObject(),tA,&ToBtType(b).GetInternalObject(),tB));
-	return util::shared_handle_cast<PxConeTwistConstraint,IConeTwistConstraint>(CreateSharedHandle<PxConeTwistConstraint>(*this,std::move(sphericalJoint)));
-}
-util::TSharedHandle<pragma::physics::IDoFConstraint> pragma::physics::PxEnvironment::CreateDoFConstraint(IRigidBody &a,const Vector3 &pivotA,const Quat &rotA,IRigidBody &b,const Vector3 &pivotB,const Quat &rotB)
-{
-	physx::PxTransform tA {uvec::create_px(pivotA),uquat::create_px(rotA)};
-	physx::PxTransform tB {uvec::create_px(pivotB),uquat::create_px(rotB)};
-	auto d6Joint = px_create_unique_ptr(physx::PxD6JointCreate(*m_physics,&ToBtType(a).GetInternalObject(),tA,&ToBtType(b).GetInternalObject(),tB));
-	return util::shared_handle_cast<PxDoFConstraint,IDoFConstraint>(CreateSharedHandle<PxDoFConstraint>(*this,std::move(d6Joint)));
-}
-util::TSharedHandle<pragma::physics::IDoFSpringConstraint> pragma::physics::PxEnvironment::CreateDoFSpringConstraint(IRigidBody &a,const Vector3 &pivotA,const Quat &rotA,IRigidBody &b,const Vector3 &pivotB,const Quat &rotB)
-{
-	// TODO?
-	return nullptr;
-}
-void pragma::physics::PxEnvironment::InitializeControllerDesc(physx::PxControllerDesc &inOutDesc,float stepHeight,float slopeLimitDeg,const Transform &startTransform)
-{
-	auto pos = ToPhysXVector(startTransform.GetOrigin());
-	inOutDesc.contactOffset = 0.1f; // TODO: Scale
-	inOutDesc.density = 10.f; // TODO
-	inOutDesc.invisibleWallHeight = 0.f;
-	inOutDesc.material = &dynamic_cast<PxMaterial&>(GetGenericMaterial()).GetPxMaterial();
-	inOutDesc.maxJumpHeight = 0.0;
-	inOutDesc.nonWalkableMode = physx::PxControllerNonWalkableMode::ePREVENT_CLIMBING_AND_FORCE_SLIDING;
-	inOutDesc.scaleCoeff = 0.8f;
-	inOutDesc.slopeLimit = umath::cos(umath::deg_to_rad(slopeLimitDeg));
-	inOutDesc.stepOffset = ToPhysXLength(stepHeight);
-	inOutDesc.position = physx::PxExtendedVec3{pos.x,pos.y,pos.z};
-	inOutDesc.upDirection = ToPhysXVector(uquat::up(startTransform.GetRotation()));
-	inOutDesc.volumeGrowth = 1.5f;
-}
-util::TSharedHandle<pragma::physics::IController> pragma::physics::PxEnvironment::CreateController(PxUniquePtr<physx::PxController> c)
-{
-	auto *pActor = c->getActor();
-	physx::PxShape *shapes;
-	if(pActor == nullptr || pActor->getShapes(&shapes,1) == 0)
-		return nullptr;
-	auto &internalShape = shapes[0];
-	std::shared_ptr<PxConvexShape> shape = nullptr;
-	switch(internalShape.getGeometryType())
+	switch(color)
 	{
-	case physx::PxGeometryType::eBOX:
-	{
-		// Geometry and shape will automatically be removed by controller
-		auto geometry = std::unique_ptr<physx::PxGeometry,void(*)(physx::PxGeometry*)>{&internalShape.getGeometry().box(),[](physx::PxGeometry*) {}};
-		auto pxShape = std::unique_ptr<physx::PxShape,void(*)(physx::PxShape*)>{&internalShape,[](physx::PxShape*) {}};
-		shape = CreateSharedPtr<PxConvexShape>(*this,std::move(pxShape),std::move(geometry));
-		InitializeShape(*shape,true);
-		break;
+	case physx::PxDebugColor::eARGB_BLACK:
+		return Color::Black;
+	case physx::PxDebugColor::eARGB_RED:
+		return Color::Red;
+	case physx::PxDebugColor::eARGB_GREEN:
+		return Color::Green;
+	case physx::PxDebugColor::eARGB_BLUE:
+		return Color::Blue;
+	case physx::PxDebugColor::eARGB_YELLOW:
+		return Color::Yellow;
+	case physx::PxDebugColor::eARGB_MAGENTA:
+		return Color::Magenta;
+	case physx::PxDebugColor::eARGB_CYAN:
+		return Color::Cyan;
+	case physx::PxDebugColor::eARGB_WHITE:
+		return Color::White;
+	case physx::PxDebugColor::eARGB_GREY:
+		return Color::LightGrey;
+	case physx::PxDebugColor::eARGB_DARKRED:
+		return Color::DarkRed;
+	case physx::PxDebugColor::eARGB_DARKGREEN:
+		return Color::DarkGreen;
+	case physx::PxDebugColor::eARGB_DARKBLUE:
+		return Color::DarkBlue;
 	}
-	case physx::PxGeometryType::eCAPSULE:
-	{
-		// Geometry and shape will automatically be removed by controller
-		auto geometry = std::unique_ptr<physx::PxGeometry,void(*)(physx::PxGeometry*)>{&internalShape.getGeometry().capsule(),[](physx::PxGeometry*) {}};
-		auto pxShape = std::unique_ptr<physx::PxShape,void(*)(physx::PxShape*)>{&internalShape,[](physx::PxShape*) {}};
-		shape = CreateSharedPtr<PxConvexShape>(*this,std::move(pxShape),std::move(geometry));
-		InitializeShape(*shape,true);
-		break;
-	}
-	default:
-		return nullptr;
-	}
-	if(shape == nullptr)
-		return nullptr;
-
-	// Actor will automatically be removed by controller
-	auto pRigidDynamic = std::unique_ptr<physx::PxRigidDynamic,void(*)(physx::PxRigidDynamic*)>{pActor,[](physx::PxRigidDynamic*) {}};
-	auto rigidBody = CreateSharedHandle<PxRigidBody>(*this,std::move(pRigidDynamic),*shape,pRigidDynamic->getMass(),FromPhysXVector(pRigidDynamic->getMassSpaceInertiaTensor()));
-	pRigidDynamic->userData = static_cast<pragma::physics::PxCollisionObject*>(rigidBody.Get());
-	InitializeCollisionObject(*rigidBody);
-
-	return util::shared_handle_cast<PxController,IController>(
-		CreateSharedHandle<pragma::physics::PxController>(*this,std::move(c),util::shared_handle_cast<PxRigidBody,ICollisionObject>(rigidBody))
-	);
-}
-util::TSharedHandle<pragma::physics::IController> pragma::physics::PxEnvironment::CreateCapsuleController(float halfWidth,float halfHeight,float stepHeight,float slopeLimitDeg,const Transform &startTransform)
-{
-	physx::PxCapsuleControllerDesc capsuleDesc {};
-	InitializeControllerDesc(capsuleDesc,stepHeight,slopeLimitDeg,startTransform);
-	capsuleDesc.climbingMode = physx::PxCapsuleClimbingMode::eEASY;
-	capsuleDesc.height = halfHeight *2.f;
-	capsuleDesc.radius = halfWidth;
-	
-	auto c = px_create_unique_ptr(m_controllerManager->createController(capsuleDesc));
-	return c ? CreateController(std::move(c)) : nullptr;
-}
-util::TSharedHandle<pragma::physics::IController> pragma::physics::PxEnvironment::CreateBoxController(const Vector3 &halfExtents,float stepHeight,float slopeLimitDeg,const Transform &startTransform)
-{
-	physx::PxBoxControllerDesc boxDesc {};
-	InitializeControllerDesc(boxDesc,stepHeight,slopeLimitDeg,startTransform);
-	boxDesc.halfHeight = halfExtents.y;
-	boxDesc.halfSideExtent = halfExtents.z;
-	boxDesc.halfForwardExtent = halfExtents.x;
-
-	auto c = px_create_unique_ptr(m_controllerManager->createController(boxDesc));
-	return c ? CreateController(std::move(c)) : nullptr;
-}
-util::TSharedHandle<pragma::physics::ICollisionObject> pragma::physics::PxEnvironment::CreateCollisionObject(IShape &shape)
-{
-	return nullptr;
-}
-util::TSharedHandle<pragma::physics::IRigidBody> pragma::physics::PxEnvironment::CreateRigidBody(float mass,IShape &shape,const Vector3 &localInertia)
-{
-	physx::PxTransform t {physx::PxVec3{0.f,0.f,0.f},physx::PxQuat{1.f}};
-	auto pRigidDynamic = px_create_unique_ptr(m_physics->createRigidDynamic(t));
-	if(pRigidDynamic == nullptr)
-		return nullptr;
-	auto rigidBody = CreateSharedHandle<PxRigidBody>(*this,std::move(pRigidDynamic),shape,mass,localInertia);
-	if(pRigidDynamic->attachShape(const_cast<PxShape&>(dynamic_cast<const PxShape&>(shape)).GetInternalObject()) == false)
-		return nullptr;
-	pRigidDynamic->userData = static_cast<pragma::physics::PxCollisionObject*>(rigidBody.Get());
-	auto density = 1.f; // TODO
-	physx::PxRigidBodyExt::updateMassAndInertia(*pRigidDynamic,density);
-	m_scene->addActor(*pRigidDynamic);
-	InitializeCollisionObject(*rigidBody);
-	return util::shared_handle_cast<PxRigidBody,IRigidBody>(rigidBody);
-}
-util::TSharedHandle<pragma::physics::ISoftBody> pragma::physics::PxEnvironment::CreateSoftBody(const PhysSoftBodyInfo &info,float mass,const std::vector<Vector3> &verts,const std::vector<uint16_t> &indices,std::vector<uint16_t> &indexTranslations)
-{
-	return nullptr;
-}
-util::TSharedHandle<pragma::physics::IGhostObject> pragma::physics::PxEnvironment::CreateGhostObject(IShape &shape)
-{
-	return nullptr;
+	return Color::White;
 }
 
-void pragma::physics::PxEnvironment::InitializeShape(PxShape &shape,bool basicOnly)
-{
-	shape.GetInternalObject().userData = &shape;
-	if(basicOnly)
-		return;
-	shape.GetInternalObject().setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE,true);
-	shape.GetInternalObject().setFlag(physx::PxShapeFlag::eVISUALIZATION,true);
-
-	physx::PxTransform t {physx::PxVec3{0.f,0.f,0.f},physx::PxQuat{1.f}};
-	shape.GetInternalObject().setLocalPose(t);
-}
-void pragma::physics::PxEnvironment::InitializeCollisionObject(PxCollisionObject &o)
-{
-	o.GetInternalObject().setActorFlag(physx::PxActorFlag::eVISUALIZATION,true);
-}
-std::shared_ptr<pragma::physics::IConvexShape> pragma::physics::PxEnvironment::CreateCapsuleShape(float halfWidth,float halfHeight,const IMaterial &mat)
-{
-	auto geometry = std::unique_ptr<physx::PxGeometry,void(*)(physx::PxGeometry*)>(
-		new physx::PxCapsuleGeometry{static_cast<physx::PxReal>(ToPhysXLength(halfWidth)),static_cast<physx::PxReal>(ToPhysXLength(halfHeight))},
-		[](physx::PxGeometry *p) {delete p;}
-	);
-	auto pxShape = px_create_unique_ptr(m_physics->createShape(*geometry,dynamic_cast<const PxMaterial&>(mat).GetPxMaterial(),false));
-	if(pxShape == nullptr)
-		return nullptr;
-	auto shape = CreateSharedPtr<PxConvexShape>(*this,std::move(pxShape),std::move(geometry));
-	InitializeShape(*shape);
-	return shape;
-}
-std::shared_ptr<pragma::physics::IConvexShape> pragma::physics::PxEnvironment::CreateBoxShape(const Vector3 &halfExtents,const IMaterial &mat)
-{
-	auto geometry = std::unique_ptr<physx::PxGeometry,void(*)(physx::PxGeometry*)>(
-		new physx::PxBoxGeometry{ToPhysXVector(halfExtents)},
-		[](physx::PxGeometry *p) {delete p;}
-	);
-	auto pxShape = px_create_unique_ptr(m_physics->createShape(*geometry,dynamic_cast<const PxMaterial&>(mat).GetPxMaterial(),false));
-	if(pxShape == nullptr)
-		return nullptr;
-	auto shape = CreateSharedPtr<PxConvexShape>(*this,std::move(pxShape),std::move(geometry));
-	InitializeShape(*shape);
-	return shape;
-}
-std::shared_ptr<pragma::physics::IConvexShape> pragma::physics::PxEnvironment::CreateCylinderShape(float radius,float height,const IMaterial &mat)
-{
-	return nullptr;
-}
-std::shared_ptr<pragma::physics::ICompoundShape> pragma::physics::PxEnvironment::CreateTorusShape(uint32_t subdivisions,double outerRadius,double innerRadius,const IMaterial &mat)
-{
-	return nullptr;
-}
-std::shared_ptr<pragma::physics::IConvexShape> pragma::physics::PxEnvironment::CreateSphereShape(float radius,const IMaterial &mat)
-{
-	auto geometry = std::unique_ptr<physx::PxGeometry,void(*)(physx::PxGeometry*)>(
-		new physx::PxSphereGeometry{static_cast<float>(ToPhysXLength(radius))},
-		[](physx::PxGeometry *p) {delete p;}
-	);
-	auto pxShape = px_create_unique_ptr(m_physics->createShape(*geometry,dynamic_cast<const PxMaterial&>(mat).GetPxMaterial(),false));
-	if(pxShape == nullptr)
-		return nullptr;
-	auto shape = CreateSharedPtr<PxConvexShape>(*this,std::move(pxShape),std::move(geometry));
-	InitializeShape(*shape);
-	return shape;
-}
-std::shared_ptr<pragma::physics::IConvexHullShape> pragma::physics::PxEnvironment::CreateConvexHullShape(const IMaterial &mat)
-{
-	return nullptr;
-}
-std::shared_ptr<pragma::physics::ITriangleShape> pragma::physics::PxEnvironment::CreateTriangleShape(const IMaterial &mat)
-{
-	return nullptr;
-}
-std::shared_ptr<pragma::physics::ICompoundShape> pragma::physics::PxEnvironment::CreateCompoundShape()
-{
-	return nullptr;
-}
-std::shared_ptr<pragma::physics::ICompoundShape> pragma::physics::PxEnvironment::CreateCompoundShape(IShape &shape)
-{
-	return nullptr;
-}
-std::shared_ptr<pragma::physics::ICompoundShape> pragma::physics::PxEnvironment::CreateCompoundShape(std::vector<IShape*> &shapes)
-{
-	return nullptr;
-}
-std::shared_ptr<pragma::physics::IShape> pragma::physics::PxEnvironment::CreateHeightfieldTerrainShape(uint32_t width,uint32_t length,Scalar maxHeight,uint32_t upAxis,const IMaterial &mat)
-{
-	return nullptr;
-}
 std::shared_ptr<pragma::physics::IMaterial> pragma::physics::PxEnvironment::CreateMaterial(float staticFriction,float dynamicFriction,float restitution)
 {
-	auto pMat = px_create_unique_ptr(m_physics->createMaterial(staticFriction,dynamicFriction,restitution));
+	auto pMat = px_create_unique_ptr(g_pxPhysics->createMaterial(staticFriction,dynamicFriction,restitution));
 	return CreateSharedPtr<PxMaterial>(*this,std::move(pMat));
-}
-namespace pragma::physics
-{
-	struct WheelCreateInfo
-	{
-		float mass;
-		float MOI;
-		float radius;
-		float width;
-		Vector3 centerOffset;
-	};
-
-	struct ChassisCreateInfo
-	{
-		float mass;
-		Vector3 CMOffset;
-	};
-};
-static void create_wheel(const pragma::physics::WheelCreateInfo &wheelCreateInfo)
-{
-#if 0
-	// https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Vehicles.html#setupwheelssimulationdata
-	//Set up the wheels.
-	PxVehicleWheelData wheels[PX_MAX_NB_WHEELS];
-	{
-		//Set up the wheel data structures with mass, moi, radius, width.
-		for(PxU32 i = 0; i < numWheels; i++)
-		{
-			wheels[i].mMass = wheelMass;
-			wheels[i].mMOI = wheelMOI;
-			wheels[i].mRadius = wheelRadius;
-			wheels[i].mWidth = wheelWidth;
-		}
-
-		//Enable the handbrake for the rear wheels only.
-		wheels[PxVehicleDrive4WWheelOrder::eREAR_LEFT].mMaxHandBrakeTorque=4000.0f;
-		wheels[PxVehicleDrive4WWheelOrder::eREAR_RIGHT].mMaxHandBrakeTorque=4000.0f;
-		//Enable steering for the front wheels only.
-		wheels[PxVehicleDrive4WWheelOrder::eFRONT_LEFT].mMaxSteer=PxPi*0.3333f;
-		wheels[PxVehicleDrive4WWheelOrder::eFRONT_RIGHT].mMaxSteer=PxPi*0.3333f;
-	}
-
-	//Set up the tires.
-	PxVehicleTireData tires[PX_MAX_NB_WHEELS];
-	{
-		//Set up the tires.
-		for(PxU32 i = 0; i < numWheels; i++)
-		{
-			tires[i].mType = TIRE_TYPE_NORMAL;
-		}
-	}
-#endif
-}
-
-void pragma::physics::PxEnvironment::CreateWheel(const WheelCreateInfo &createInfo)
-{
-	physx::PxVehicleWheelData pxWheelData {};
-	pxWheelData.mRadius = ToPhysXLength(createInfo.radius);
-	pxWheelData.mWidth = 0.f; // TODO
-	pxWheelData.mMass = createInfo.mass;
-	pxWheelData.mMOI = createInfo.MOI;
-	pxWheelData.mDampingRate = 0; // TODO
-	pxWheelData.mMaxBrakeTorque = 0; // TODO
-	pxWheelData.mMaxHandBrakeTorque = 0; // TODO
-	pxWheelData.mMaxSteer = 0; // TODO
-	pxWheelData.mToeAngle = 0; // TODO
-
-	physx::PxVehicleTireData tireData {};
-	tireData.mCamberStiffnessPerUnitGravity;
-	tireData.mFrictionVsSlipGraph;
-	tireData.mLatStiffX;
-	tireData.mLatStiffY;
-	tireData.mLongitudinalStiffnessPerUnitGravity;
-	tireData.mType;
-}
-
-static void create_vehicle()
-{
-
-}
-
-void pragma::physics::PxEnvironment::CreateVehicle()
-{
-#if 0
-	uint32_t numWheels = 0;
-
-	physx::PxVehicleWheelsSimData* wheelsSimData = physx::PxVehicleWheelsSimData::allocate(numWheels);
-	physx::setupWheelsSimulationData(wheelsSimData);
-
-	physx::PxVehicleDriveSimData4W driveSimData;
-	physx::setupDriveSimData(driveSimData);
-
-	physx::PxRigidDynamic* vehActor = px_create_unique_ptr(m_physics->createRigidDynamic(startPose);
-	setupVehicleActor(vehActor);
-	m_scene->addActor(*vehActor);
-
-	physx::PxVehicleDrive4W* vehDrive4W = physx::PxVehicleDrive4W::allocate(numWheels);
-	vehDrive4W->setup(m_physics.get(), veh4WActor, *wheelsSimData, driveSimData, numWheels - 4);
-	wheelsSimData->free();
-#endif
 }
 
 pragma::physics::IEnvironment::RemainingDeltaTime pragma::physics::PxEnvironment::StepSimulation(float timeStep,int maxSubSteps,float fixedTimeStep)
 {
+	if(fixedTimeStep == 0.f)
+		return timeStep;
+	
+	for(auto &hController : GetControllers())
+		PxController::GetController(*hController).PreSimulate();
+
 	auto t = timeStep /fixedTimeStep;
 	auto numSubSteps = umath::floor(t);
 	for(auto i=decltype(numSubSteps){0u};i<numSubSteps;++i)
@@ -546,6 +437,61 @@ pragma::physics::IEnvironment::RemainingDeltaTime pragma::physics::PxEnvironment
 		auto success = m_scene->fetchResults(true,&err);
 		if(err)
 			;
+	}
+
+	for(auto &hController : GetControllers())
+		PxController::GetController(*hController).PostSimulate();
+	
+	auto *pVisDebugger = GetVisualDebugger();
+	if(pVisDebugger)
+	{
+		// TODO
+		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eACTOR_AXES,1.f);
+		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eBODY_AXES,1.f);
+		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_SHAPES,1.f);
+		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_DYNAMIC,1.f);
+		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_STATIC,1.f);
+		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCONTACT_POINT,1.f);
+		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCONTACT_NORMAL,1.f);
+		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eWORLD_AXES,1.f);
+
+		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eSCALE,1.f);
+
+		auto &renderBuffer = m_scene->getRenderBuffer();
+		pVisDebugger->Reset();
+
+		auto numLines = renderBuffer.getNbLines();
+		auto *pLines = renderBuffer.getLines();
+		for(auto i=decltype(numLines){0u};i<numLines;++i)
+		{
+			auto &line = pLines[i];
+			pVisDebugger->DrawLine(FromPhysXVector(line.pos0),FromPhysXVector(line.pos1),FromPhysXColor(line.color0),FromPhysXColor(line.color1));
+		}
+
+		auto numPoints = renderBuffer.getNbPoints();
+		auto *pPoints = renderBuffer.getPoints();
+		for(auto i=decltype(numPoints){0u};i<numPoints;++i)
+		{
+			auto &point = pPoints[i];
+			pVisDebugger->DrawPoint(FromPhysXVector(point.pos),FromPhysXColor(point.color));
+		}
+
+		auto numTris = renderBuffer.getNbTriangles();
+		auto *pTris = renderBuffer.getTriangles();
+		for(auto i=decltype(numTris){0u};i<numTris;++i)
+		{
+			auto &tri = pTris[i];
+			pVisDebugger->DrawTriangle(FromPhysXVector(tri.pos0),FromPhysXVector(tri.pos1),FromPhysXVector(tri.pos2),FromPhysXColor(tri.color0),FromPhysXColor(tri.color1),FromPhysXColor(tri.color2));
+		}
+
+		auto numTexts = renderBuffer.getNbTexts();
+		auto *pTexts = renderBuffer.getTexts();
+		for(auto i=decltype(numTexts){0u};i<numTexts;++i)
+		{
+			auto &text = pTexts[i];
+			pVisDebugger->DrawText(text.string,FromPhysXVector(text.position),FromPhysXColor(text.color),text.size);
+		}
+		pVisDebugger->Flush();
 	}
 	return fmodf(timeStep,fixedTimeStep);
 }

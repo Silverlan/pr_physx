@@ -12,7 +12,7 @@ void pragma::physics::PxEnvironment::InitializeRayCastResult(const TraceData &da
 	if(colObj)
 	{
 		outResult.collisionObj = util::weak_shared_handle_cast<IBase,ICollisionObject>(colObj->GetHandle());
-		auto *physObj = static_cast<PhysObj*>(colObj->userData);
+		auto *physObj = colObj->GetPhysObj();
 		if(physObj)
 		{
 			outResult.physObj = physObj->GetHandle();
@@ -38,7 +38,7 @@ void pragma::physics::PxEnvironment::InitializeRayCastResult(const TraceData &da
 	if(colObj)
 	{
 		outResult.collisionObj = util::weak_shared_handle_cast<IBase,ICollisionObject>(colObj->GetHandle());
-		auto *physObj = static_cast<PhysObj*>(colObj->userData);
+		auto *physObj = colObj->GetPhysObj();
 		if(physObj)
 		{
 			outResult.physObj = physObj->GetHandle();
@@ -60,7 +60,7 @@ void pragma::physics::PxEnvironment::InitializeRayCastResult(const TraceData &da
 	if(colObj)
 	{
 		outResult.collisionObj = util::weak_shared_handle_cast<IBase,ICollisionObject>(colObj->GetHandle());
-		auto *physObj = static_cast<PhysObj*>(colObj->userData);
+		auto *physObj = colObj->GetPhysObj();
 		if(physObj)
 		{
 			outResult.physObj = physObj->GetHandle();
@@ -238,4 +238,5 @@ Bool pragma::physics::PxEnvironment::Sweep(const TraceData &data,std::vector<Tra
 	InitializeRayCastResult(data,distance,hit.block,result,bHitAny ? RayCastHitType::Block : RayCastHitType::None);
 	return bHitAny;
 }
+physx::PxCooking &pragma::physics::PxEnvironment::GetCooking() {return *m_cooking;}
 #pragma optimize("",on)

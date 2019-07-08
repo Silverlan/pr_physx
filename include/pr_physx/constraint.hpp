@@ -25,7 +25,6 @@ namespace pragma::physics
 		static const PxConstraint &GetConstraint(const IConstraint &c);
 		physx::PxJoint &GetInternalObject() const;
 
-		virtual void Initialize() override;
 		virtual void SetEnabled(bool b) override;
 		virtual bool IsEnabled() const override;
 		virtual void EnableCollisions() override;
@@ -39,6 +38,9 @@ namespace pragma::physics
 		virtual void SetBreakingImpulseThreshold(float threshold) override;
 	protected:
 		PxConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> joint);
+		virtual void Initialize() override;
+		virtual void RemoveWorldObject() override;
+		virtual void DoAddWorldObject() override;
 		PxEnvironment &GetPxEnv() const;
 		virtual void DoSetCollisionsEnabled(Bool b) override;
 		PxUniquePtr<physx::PxJoint> m_joint = px_null_ptr<physx::PxJoint>();
@@ -51,7 +53,7 @@ namespace pragma::physics
 	public:
 		friend IEnvironment;
 	protected:
-		PxFixedConstraint(IEnvironment &env,PxUniquePtr<physx::PxFixedJoint> c);
+		PxFixedConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
 	};
 
 	class PxBallSocketConstraint
@@ -61,7 +63,7 @@ namespace pragma::physics
 	public:
 		friend IEnvironment;
 	protected:
-		PxBallSocketConstraint(IEnvironment &env,PxUniquePtr<physx::PxSphericalJoint> c);
+		PxBallSocketConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
 	};
 
 	class PxHingeConstraint
@@ -71,7 +73,7 @@ namespace pragma::physics
 	public:
 		friend IEnvironment;
 	protected:
-		PxHingeConstraint(IEnvironment &env,PxUniquePtr<physx::PxRevoluteJoint> c);
+		PxHingeConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
 	};
 
 	class PxSliderConstraint
@@ -81,7 +83,7 @@ namespace pragma::physics
 	public:
 		friend IEnvironment;
 	protected:
-		PxSliderConstraint(IEnvironment &env,PxUniquePtr<physx::PxPrismaticJoint> c);
+		PxSliderConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
 	};
 
 	class PxConeTwistConstraint
@@ -92,7 +94,7 @@ namespace pragma::physics
 		friend IEnvironment;
 		virtual void SetLimit(float swingSpan1,float swingSpan2,float twistSpan,float softness=1.f,float biasFactor=0.3f,float relaxationFactor=1.f) override;
 	protected:
-		PxConeTwistConstraint(IEnvironment &env,PxUniquePtr<physx::PxSphericalJoint> c);
+		PxConeTwistConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
 	};
 
 	class PxDoFConstraint
@@ -163,7 +165,7 @@ namespace pragma::physics
 		virtual Vector3i GetCurrentLinearLimit() const override;
 		virtual Vector3 GetCurrentLinearAccumulatedImpulse() const override;
 	protected:
-		PxDoFConstraint(IEnvironment &env,PxUniquePtr<physx::PxD6Joint> c);
+		PxDoFConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
 	};
 
 	class PxDoFSpringConstraint
@@ -223,7 +225,7 @@ namespace pragma::physics
 		virtual void SetStopCFM(AxisType type,pragma::Axis axis,double value) override;
 		virtual double GetStopCFM(AxisType type,pragma::Axis axis) const override;
 	protected:
-		PxDoFSpringConstraint(IEnvironment &env,PxUniquePtr<physx::PxD6Joint> c);
+		PxDoFSpringConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
 	};
 };
 
