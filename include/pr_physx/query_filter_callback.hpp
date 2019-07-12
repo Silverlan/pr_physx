@@ -1,19 +1,16 @@
-#ifndef __PR_PX_RAYCAST_HPP__
-#define __PR_PX_RAYCAST_HPP__
+#ifndef __PR_PX_QUERY_FILTER_CALLBACK_HPP__
+#define __PR_PX_QUERY_FILTER_CALLBACK_HPP__
 
-#include <PxPhysicsAPI.h>
-#include <pragma/physics/raycast_filter.hpp>
+#include "pr_physx/common.hpp"
 
-enum class RayCastHitType : uint8_t;
 namespace pragma::physics
 {
-	class IRayCastFilterCallback;
-	class PhysXEnvironment;
-	class RayCastFilterCallback
+	class ICollisionObject;
+	class PhysXQueryFilterCallback
 		: public physx::PxQueryFilterCallback
 	{
 	public:
-		RayCastFilterCallback(const PhysXEnvironment &env,IRayCastFilterCallback &rayCastFilterCallback);
+		PhysXQueryFilterCallback(ICollisionObject &collisionObject);
 		/**
 		\brief This filter callback is executed before the exact intersection test if PxQueryFlag::ePREFILTER flag was set.
 
@@ -23,7 +20,8 @@ namespace pragma::physics
 		\param[in,out] queryFlags scene query flags from the query's function call (only flags from PxHitFlag::eMODIFIABLE_FLAGS bitmask can be modified)
 		\return the updated type for this hit  (see #PxQueryHitType)
 		*/
-		virtual physx::PxQueryHitType::Enum preFilter(const physx::PxFilterData& filterData, const physx::PxShape* shape, const physx::PxRigidActor* actor, physx::PxHitFlags& queryFlags) override;
+		virtual physx::PxQueryHitType::Enum preFilter(
+			const physx::PxFilterData& filterData, const physx::PxShape* shape, const physx::PxRigidActor* actor, physx::PxHitFlags& queryFlags) override;
 
 		/**
 		\brief This filter callback is executed if the exact intersection test returned true and PxQueryFlag::ePOSTFILTER flag was set.
@@ -34,10 +32,7 @@ namespace pragma::physics
 		*/
 		virtual physx::PxQueryHitType::Enum postFilter(const physx::PxFilterData& filterData, const physx::PxQueryHit& hit) override;
 	private:
-		physx::PxQueryHitType::Enum Filter(const physx::PxShape *shape,const physx::PxRigidActor *actor,RayCastHitType(IRayCastFilterCallback::*filter)(IShape&,IRigidBody&) const);
-
-		const PhysXEnvironment &m_env;
-		IRayCastFilterCallback &m_rayCastFilterCallback;
+		ICollisionObject &m_collisionObject;
 	};
 };
 

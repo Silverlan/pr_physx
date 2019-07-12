@@ -7,24 +7,34 @@
 #include <common/PxCoreUtilityTypes.h>
 
 #pragma optimize("",off)
-pragma::physics::PxShape &pragma::physics::PxShape::GetShape(IShape &s)
+pragma::physics::PhysXShape &pragma::physics::PhysXShape::GetShape(IShape &s)
 {
-	return *static_cast<PxShape*>(s.GetUserData());
+	return *static_cast<PhysXShape*>(s.GetUserData());
 }
-const pragma::physics::PxShape &pragma::physics::PxShape::GetShape(const IShape &o) {return GetShape(const_cast<IShape&>(o));}
-pragma::physics::PxShape::PxShape(IEnvironment &env,PxUniquePtr<physx::PxShape> shape,PxUniquePtr<physx::PxGeometry> geometry)
+const pragma::physics::PhysXShape &pragma::physics::PhysXShape::GetShape(const IShape &o) {return GetShape(const_cast<IShape&>(o));}
+pragma::physics::PhysXShape::PhysXShape(IEnvironment &env,PhysXUniquePtr<physx::PxShape> shape,PhysXUniquePtr<physx::PxGeometry> geometry)
 	: IShape{env},m_geometry{std::move(geometry)},m_shape{std::move(shape)}
 {
 	SetUserData(this);
+	UpdateShapeProperties();
 }
-const physx::PxShape &pragma::physics::PxShape::GetInternalObject() const {return *m_shape;}
-physx::PxShape &pragma::physics::PxShape::GetInternalObject() {return *m_shape;}
-pragma::physics::PxEnvironment &pragma::physics::PxShape::GetPxEnv() const {return static_cast<PxEnvironment&>(m_physEnv);}
-void pragma::physics::PxShape::CalculateLocalInertia(float mass,Vector3 *localInertia) const
+void pragma::physics::PhysXShape::UpdateShapeProperties()
+{
+	if(m_shape == nullptr)
+		return;
+	auto *pShape = m_shape.get();
+	auto massProps = physx::PxRigidBodyExt::computeMassPropertiesFromShapes(&pShape,1);
+	m_mass = GetPxEnv().FromPhysXMass(massProps.mass);
+	m_centerOfMass = GetPxEnv().FromPhysXVector(massProps.centerOfMass);
+}
+const physx::PxShape &pragma::physics::PhysXShape::GetInternalObject() const {return *m_shape;}
+physx::PxShape &pragma::physics::PhysXShape::GetInternalObject() {return *m_shape;}
+pragma::physics::PhysXEnvironment &pragma::physics::PhysXShape::GetPxEnv() const {return static_cast<PhysXEnvironment&>(m_physEnv);}
+void pragma::physics::PhysXShape::CalculateLocalInertia(float mass,Vector3 *localInertia) const
 {
 	// TODO
 }
-void pragma::physics::PxShape::GetAABB(Vector3 &min,Vector3 &max) const
+void pragma::physics::PhysXShape::GetAABB(Vector3 &min,Vector3 &max) const
 {
 	auto t = m_shape->getLocalPose();
 	auto origin = GetPxEnv().FromPhysXVector(t.p);
@@ -58,52 +68,69 @@ eTRIANGLEMESH,
 eHEIGHTFIELD,
 */
 }
-void pragma::physics::PxShape::GetBoundingSphere(Vector3 &outCenter,float &outRadius) const
+void pragma::physics::PhysXShape::GetBoundingSphere(Vector3 &outCenter,float &outRadius) const
 {
 	// TODO
 }
+void pragma::physics::PhysXShape::ApplySurfaceMaterial(IMaterial &mat)
+{
+	if(m_shape == nullptr)
+		return;
+	auto numMats = m_shape->getNbMaterials();
+	std::vector<physx::PxMaterial*> materials {numMats};
+	numMats = m_shape->getMaterials(materials.data(),materials.size());
+	materials.resize(numMats);
+	if(materials.empty())
+		return;
+	materials.front() = &PhysXMaterial::GetMaterial(mat).GetInternalObject();
+	m_shape->setMaterials(materials.data(),materials.size());
+}
 
-void pragma::physics::PxShape::SetTrigger(bool bTrigger)
+float pragma::physics::PhysXShape::GetMass() const {return m_mass;}
+void pragma::physics::PhysXShape::SetMass(float mass) {m_mass = mass;}
+Vector3 pragma::physics::PhysXShape::GetCenterOfMass() const {return m_centerOfMass;}
+
+void pragma::physics::PhysXShape::SetTrigger(bool bTrigger)
 {
 	GetInternalObject().setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE,!bTrigger);
 	GetInternalObject().setFlag(physx::PxShapeFlag::eTRIGGER_SHAPE,bTrigger);
 }
-bool pragma::physics::PxShape::IsTrigger() const
+bool pragma::physics::PhysXShape::IsTrigger() const
 {
 	return GetInternalObject().getFlags().isSet(physx::PxShapeFlag::eTRIGGER_SHAPE);
 }
 
-void pragma::physics::PxShape::SetLocalPose(const Transform &t)
+void pragma::physics::PhysXShape::SetLocalPose(const Transform &t)
 {
 	GetInternalObject().setLocalPose(GetPxEnv().CreatePxTransform(t));
 }
-pragma::physics::Transform pragma::physics::PxShape::GetLocalPose() const
+pragma::physics::Transform pragma::physics::PhysXShape::GetLocalPose() const
 {
 	return GetPxEnv().CreateTransform(GetInternalObject().getLocalPose());
 }
 
-bool pragma::physics::PxShape::IsValid() const {return IShape::IsValid() && m_shape != nullptr;}
+bool pragma::physics::PhysXShape::IsValid() const {return IShape::IsValid() && m_shape != nullptr;}
 
 //////////////
 
-pragma::physics::PxConvexShape::PxConvexShape(IEnvironment &env,PxUniquePtr<physx::PxShape> shape,PxUniquePtr<physx::PxGeometry> geometry)
-	: IConvexShape{env},PxShape{env,std::move(shape),std::move(geometry)},IShape{env}
+pragma::physics::PhysXConvexShape::PhysXConvexShape(IEnvironment &env,PhysXUniquePtr<physx::PxShape> shape,PhysXUniquePtr<physx::PxGeometry> geometry)
+	: IConvexShape{env},PhysXShape{env,std::move(shape),std::move(geometry)},IShape{env}
 {}
-void pragma::physics::PxConvexShape::SetLocalScaling(const Vector3 &scale)
+void pragma::physics::PhysXConvexShape::SetLocalScaling(const Vector3 &scale)
 {
 	// TODO
 }
 
 //////////////
 
-pragma::physics::PxConvexHullShape::PxConvexHullShape(IEnvironment &env)
-	: IConvexHullShape{env},IShape{env},IConvexShape{env},PxConvexShape{env,px_null_ptr<physx::PxShape>(),px_null_ptr<physx::PxGeometry>()}
+pragma::physics::PhysXConvexHullShape::PhysXConvexHullShape(IEnvironment &env)
+	: IConvexHullShape{env},IShape{env},IConvexShape{env},PhysXConvexShape{env,px_null_ptr<physx::PxShape>(),px_null_ptr<physx::PxGeometry>()}
 {}
-void pragma::physics::PxConvexHullShape::AddPoint(const Vector3 &point)
+void pragma::physics::PhysXConvexHullShape::AddPoint(const Vector3 &point)
 {
 	m_vertices.push_back(point);
 }
-void pragma::physics::PxConvexHullShape::Build()
+void pragma::physics::PhysXConvexHullShape::DoBuild()
 {
 	m_shape = nullptr;
 
@@ -170,69 +197,74 @@ void pragma::physics::PxConvexHullShape::Build()
 		[](physx::PxGeometry *p) {delete p;}
 	);
 	auto *surfMat = GetSurfaceMaterial();
-	m_shape = px_create_unique_ptr(PxGetPhysics().createShape(*m_geometry,PxMaterial::GetMaterial(/*surfMat ? surfMat->GetPhysicsMaterial() : */GetPxEnv().GetGenericMaterial()).GetInternalObject(),false));
+	m_shape = px_create_unique_ptr(PxGetPhysics().createShape(
+		*m_geometry,
+		PhysXMaterial::GetMaterial(surfMat ? surfMat->GetPhysicsMaterial() : GetPxEnv().GetGenericMaterial()).GetInternalObject(),
+		true
+	));
 	GetPxEnv().InitializeShape(*this);
+	UpdateShapeProperties();
 }
-void pragma::physics::PxConvexHullShape::AddTriangle(uint32_t idx0,uint32_t idx1,uint32_t idx2)
+void pragma::physics::PhysXConvexHullShape::AddTriangle(uint32_t idx0,uint32_t idx1,uint32_t idx2)
 {
 	for(auto idx : {idx0,idx1,idx2})
 		m_triangles.push_back(idx);
 }
-void pragma::physics::PxConvexHullShape::ReservePoints(uint32_t numPoints)
+void pragma::physics::PhysXConvexHullShape::ReservePoints(uint32_t numPoints)
 {
 	m_vertices.reserve(numPoints);
 }
-void pragma::physics::PxConvexHullShape::ReserveTriangles(uint32_t numTris)
+void pragma::physics::PhysXConvexHullShape::ReserveTriangles(uint32_t numTris)
 {
 	m_triangles.reserve(numTris *3);
 }
 
 //////////////
 
-pragma::physics::PxCapsuleShape::PxCapsuleShape(IEnvironment &env,PxUniquePtr<physx::PxShape> shape,PxUniquePtr<physx::PxGeometry> geometry)
-	: ICapsuleShape{env},PxConvexShape{env,std::move(shape),std::move(geometry)},IShape{env},IConvexShape{env}
+pragma::physics::PhysXCapsuleShape::PhysXCapsuleShape(IEnvironment &env,PhysXUniquePtr<physx::PxShape> shape,PhysXUniquePtr<physx::PxGeometry> geometry)
+	: ICapsuleShape{env},PhysXConvexShape{env,std::move(shape),std::move(geometry)},IShape{env},IConvexShape{env}
 {}
 
-float pragma::physics::PxCapsuleShape::GetRadius() const
+float pragma::physics::PhysXCapsuleShape::GetRadius() const
 {
 	return GetPxEnv().FromPhysXLength(GetInternalObject().getGeometry().capsule().radius);
 }
-float pragma::physics::PxCapsuleShape::GetHalfHeight() const
+float pragma::physics::PhysXCapsuleShape::GetHalfHeight() const
 {
 	return GetPxEnv().FromPhysXLength(GetInternalObject().getGeometry().capsule().halfHeight *0.5f);
 }
 
 //////////////
 
-pragma::physics::PxBoxShape::PxBoxShape(IEnvironment &env,PxUniquePtr<physx::PxShape> shape,PxUniquePtr<physx::PxGeometry> geometry)
-	: IBoxShape{env},PxConvexShape{env,std::move(shape),std::move(geometry)},IShape{env},IConvexShape{env}
+pragma::physics::PhysXBoxShape::PhysXBoxShape(IEnvironment &env,PhysXUniquePtr<physx::PxShape> shape,PhysXUniquePtr<physx::PxGeometry> geometry)
+	: IBoxShape{env},PhysXConvexShape{env,std::move(shape),std::move(geometry)},IShape{env},IConvexShape{env}
 {}
 
-Vector3 pragma::physics::PxBoxShape::GetHalfExtents() const
+Vector3 pragma::physics::PhysXBoxShape::GetHalfExtents() const
 {
 	return GetPxEnv().FromPhysXVector(GetInternalObject().getGeometry().box().halfExtents);
 }
 
 //////////////
 
-pragma::physics::PxCompoundShape::PxCompoundShape(IEnvironment &env)
-	: IShape{env},ICompoundShape{env},PxShape{env,px_null_ptr<physx::PxShape>(),px_null_ptr<physx::PxGeometry>()}
+pragma::physics::PhysXCompoundShape::PhysXCompoundShape(IEnvironment &env)
+	: IShape{env},ICompoundShape{env},PhysXShape{env,px_null_ptr<physx::PxShape>(),px_null_ptr<physx::PxGeometry>()}
 {}
-void pragma::physics::PxCompoundShape::AddShape(pragma::physics::IShape &shape)
+void pragma::physics::PhysXCompoundShape::AddShape(pragma::physics::IShape &shape)
 {
 	m_shapes.push_back(std::static_pointer_cast<IShape>(shape.shared_from_this()));
 }
 
 //////////////
 
-pragma::physics::PxTriangleShape::PxTriangleShape(IEnvironment &env)
-	: ITriangleShape{env},PxShape{env,px_null_ptr<physx::PxShape>(),px_null_ptr<physx::PxGeometry>()},IShape{env}
+pragma::physics::PhysXTriangleShape::PhysXTriangleShape(IEnvironment &env)
+	: ITriangleShape{env},PhysXShape{env,px_null_ptr<physx::PxShape>(),px_null_ptr<physx::PxGeometry>()},IShape{env}
 {}
-void pragma::physics::PxTriangleShape::CalculateLocalInertia(float,Vector3 *localInertia) const
+void pragma::physics::PhysXTriangleShape::CalculateLocalInertia(float,Vector3 *localInertia) const
 {
 	*localInertia = Vector3(0.f,0.f,0.f);
 }
-void pragma::physics::PxTriangleShape::Build(const std::vector<SurfaceMaterial> *materials)
+void pragma::physics::PhysXTriangleShape::DoBuild(const std::vector<SurfaceMaterial> *materials)
 {
 	m_shape = nullptr;
 	auto &verts = GetVertices();
@@ -241,7 +273,7 @@ void pragma::physics::PxTriangleShape::Build(const std::vector<SurfaceMaterial> 
 	meshDesc.points.count = verts.size(); // TODO: Convert to PhysX coordinate system
 	meshDesc.points.stride = sizeof(verts.front());
 	meshDesc.points.data = verts.data();
-	meshDesc.flags = physx::PxMeshFlag::e16_BIT_INDICES;
+	meshDesc.flags = static_cast<physx::PxMeshFlags>(0);
 
 	auto &tris = GetTriangles();
 	static_assert(std::is_same_v<std::remove_reference_t<decltype(tris.front())>,physx::PxU32>,"Vertex index type mismatch!");
@@ -256,11 +288,11 @@ void pragma::physics::PxTriangleShape::Build(const std::vector<SurfaceMaterial> 
 		auto &matIndices = GetSurfaceMaterials();
 		
 		pxIndices.reserve(matIndices.size());
-		std::unordered_map<PxMaterial*,size_t> materialIndices {};
+		std::unordered_map<PhysXMaterial*,size_t> materialIndices {};
 		for(auto idx : matIndices)
 		{
 			auto &mat = materials->at(idx);
-			auto &physMat = PxMaterial::GetMaterial(mat.GetPhysicsMaterial());
+			auto &physMat = PhysXMaterial::GetMaterial(mat.GetPhysicsMaterial());
 			auto it = materialIndices.find(&physMat);
 			if(it == materialIndices.end())
 			{
@@ -289,8 +321,13 @@ void pragma::physics::PxTriangleShape::Build(const std::vector<SurfaceMaterial> 
 		[](physx::PxGeometry *p) {delete p;}
 	);
 	auto *surfMat = GetSurfaceMaterial();
-	m_shape = px_create_unique_ptr(PxGetPhysics().createShape(*m_geometry,PxMaterial::GetMaterial(/*surfMat ? surfMat->GetPhysicsMaterial() : */GetPxEnv().GetGenericMaterial()).GetInternalObject(),false));
+	m_shape = px_create_unique_ptr(PxGetPhysics().createShape(
+		*m_geometry,
+		PhysXMaterial::GetMaterial(surfMat ? surfMat->GetPhysicsMaterial() : GetPxEnv().GetGenericMaterial()).GetInternalObject(),
+		true
+	));
 	GetPxEnv().InitializeShape(*this);
 	m_shape->setMaterials(pxMaterials.data(),pxMaterials.size());
+	UpdateShapeProperties();
 }
 #pragma optimize("",on)

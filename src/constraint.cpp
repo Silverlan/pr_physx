@@ -1,377 +1,377 @@
 #include "pr_physx/constraint.hpp"
 #include "pr_physx/environment.hpp"
 
-pragma::physics::PxConstraint &pragma::physics::PxConstraint::GetConstraint(IConstraint &c)
+pragma::physics::PhysXConstraint &pragma::physics::PhysXConstraint::GetConstraint(IConstraint &c)
 {
-	return *static_cast<PxConstraint*>(c.GetUserData());
+	return *static_cast<PhysXConstraint*>(c.GetUserData());
 }
-const pragma::physics::PxConstraint &pragma::physics::PxConstraint::GetConstraint(const IConstraint &o) {return GetConstraint(const_cast<IConstraint&>(o));}
-pragma::physics::PxConstraint::PxConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> joint)
+const pragma::physics::PhysXConstraint &pragma::physics::PhysXConstraint::GetConstraint(const IConstraint &o) {return GetConstraint(const_cast<IConstraint&>(o));}
+pragma::physics::PhysXConstraint::PhysXConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> joint)
 	: IConstraint{env},m_joint{std::move(joint)}
 {
 	SetUserData(this);
 }
-void pragma::physics::PxConstraint::Initialize()
+void pragma::physics::PhysXConstraint::Initialize()
 {
 	IConstraint::Initialize();
 	GetInternalObject().userData = this;
 }
-void pragma::physics::PxConstraint::RemoveWorldObject() {}
-void pragma::physics::PxConstraint::DoAddWorldObject() {}
-physx::PxJoint &pragma::physics::PxConstraint::GetInternalObject() const {return *m_joint;}
-pragma::physics::PxEnvironment &pragma::physics::PxConstraint::GetPxEnv() const {return static_cast<PxEnvironment&>(m_physEnv);}
-void pragma::physics::PxConstraint::DoSetCollisionsEnabled(Bool b)
+void pragma::physics::PhysXConstraint::RemoveWorldObject() {}
+void pragma::physics::PhysXConstraint::DoAddWorldObject() {}
+physx::PxJoint &pragma::physics::PhysXConstraint::GetInternalObject() const {return *m_joint;}
+pragma::physics::PhysXEnvironment &pragma::physics::PhysXConstraint::GetPxEnv() const {return static_cast<PhysXEnvironment&>(m_physEnv);}
+void pragma::physics::PhysXConstraint::DoSetCollisionsEnabled(Bool b)
 {
 	// TODO
 }
-void pragma::physics::PxConstraint::SetEnabled(bool b)
+void pragma::physics::PhysXConstraint::SetEnabled(bool b)
 {
 	// TODO
 }
-bool pragma::physics::PxConstraint::IsEnabled() const
+bool pragma::physics::PhysXConstraint::IsEnabled() const
 {
 	// TODO
 	return false;
 }
-void pragma::physics::PxConstraint::EnableCollisions()
+void pragma::physics::PhysXConstraint::EnableCollisions()
 {
 	// TODO
 }
-void pragma::physics::PxConstraint::DisableCollisions()
+void pragma::physics::PhysXConstraint::DisableCollisions()
 {
 	// TODO
 }
-pragma::physics::IRigidBody *pragma::physics::PxConstraint::GetSourceObject()
+pragma::physics::IRigidBody *pragma::physics::PhysXConstraint::GetSourceObject()
 {
 	// TODO
 	return nullptr;
 }
-pragma::physics::IRigidBody *pragma::physics::PxConstraint::GetTargetObject()
+pragma::physics::IRigidBody *pragma::physics::PhysXConstraint::GetTargetObject()
 {
 	// TODO
 	return nullptr;
 }
 
-void pragma::physics::PxConstraint::SetOverrideSolverIterationCount(int32_t count)
+void pragma::physics::PhysXConstraint::SetOverrideSolverIterationCount(int32_t count)
 {
 	// TODO
 }
-int32_t pragma::physics::PxConstraint::GetOverrideSolverIterationCount() const
+int32_t pragma::physics::PhysXConstraint::GetOverrideSolverIterationCount() const
 {
 	// TODO
 	return 0;
 }
-float pragma::physics::PxConstraint::GetBreakingImpulseThreshold() const
+float pragma::physics::PhysXConstraint::GetBreakingImpulseThreshold() const
 {
 	// TODO
 	return 0.f;
 }
-void pragma::physics::PxConstraint::SetBreakingImpulseThreshold(float threshold)
+void pragma::physics::PhysXConstraint::SetBreakingImpulseThreshold(float threshold)
 {
 	// TODO
 }
 
 /////////////
 
-pragma::physics::PxFixedConstraint::PxFixedConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
-	: IFixedConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
+pragma::physics::PhysXFixedConstraint::PhysXFixedConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c)
+	: IFixedConstraint{env},PhysXConstraint{env,std::move(c)},IConstraint{env}
 {}
 
 /////////////
 
-pragma::physics::PxBallSocketConstraint::PxBallSocketConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
-	: IBallSocketConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
+pragma::physics::PhysXBallSocketConstraint::PhysXBallSocketConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c)
+	: IBallSocketConstraint{env},PhysXConstraint{env,std::move(c)},IConstraint{env}
 {}
 
 /////////////
 
-pragma::physics::PxHingeConstraint::PxHingeConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
-	: IHingeConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
+pragma::physics::PhysXHingeConstraint::PhysXHingeConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c)
+	: IHingeConstraint{env},PhysXConstraint{env,std::move(c)},IConstraint{env}
 {}
 
 /////////////
 
-pragma::physics::PxSliderConstraint::PxSliderConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
-	: ISliderConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
+pragma::physics::PhysXSliderConstraint::PhysXSliderConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c)
+	: ISliderConstraint{env},PhysXConstraint{env,std::move(c)},IConstraint{env}
 {}
 
 /////////////
 
-pragma::physics::PxConeTwistConstraint::PxConeTwistConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
-	: IConeTwistConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
+pragma::physics::PhysXConeTwistConstraint::PhysXConeTwistConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c)
+	: IConeTwistConstraint{env},PhysXConstraint{env,std::move(c)},IConstraint{env}
 {}
-void pragma::physics::PxConeTwistConstraint::SetLimit(float swingSpan1,float swingSpan2,float twistSpan,float softness,float biasFactor,float relaxationFactor)
+void pragma::physics::PhysXConeTwistConstraint::SetLimit(float swingSpan1,float swingSpan2,float twistSpan,float softness,float biasFactor,float relaxationFactor)
 {
 	// TODO
 }
 
 /////////////
 
-pragma::physics::PxDoFConstraint::PxDoFConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
-	: IDoFConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
+pragma::physics::PhysXDoFConstraint::PhysXDoFConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c)
+	: IDoFConstraint{env},PhysXConstraint{env,std::move(c)},IConstraint{env}
 {}
-void pragma::physics::PxDoFConstraint::SetLinearLimit(const Vector3 &lower,const Vector3 &upper)
+void pragma::physics::PhysXDoFConstraint::SetLinearLimit(const Vector3 &lower,const Vector3 &upper)
 {
 	// TODO
 }
-void pragma::physics::PxDoFConstraint::SetLinearLimit(const Vector3 &lim)
+void pragma::physics::PhysXDoFConstraint::SetLinearLimit(const Vector3 &lim)
 {
 	// TODO
 }
-void pragma::physics::PxDoFConstraint::SetLinearLowerLimit(const Vector3 &lim)
+void pragma::physics::PhysXDoFConstraint::SetLinearLowerLimit(const Vector3 &lim)
 {
 	// TODO
 }
-void pragma::physics::PxDoFConstraint::SetLinearUpperLimit(const Vector3 &lim)
+void pragma::physics::PhysXDoFConstraint::SetLinearUpperLimit(const Vector3 &lim)
 {
 	// TODO
 }
-void pragma::physics::PxDoFConstraint::SetAngularLimit(const EulerAngles &lower,const EulerAngles &upper)
+void pragma::physics::PhysXDoFConstraint::SetAngularLimit(const EulerAngles &lower,const EulerAngles &upper)
 {
 	// TODO
 }
-void pragma::physics::PxDoFConstraint::SetAngularLimit(const EulerAngles &lim)
+void pragma::physics::PhysXDoFConstraint::SetAngularLimit(const EulerAngles &lim)
 {
 	// TODO
 }
-void pragma::physics::PxDoFConstraint::SetAngularLowerLimit(const EulerAngles &lim)
+void pragma::physics::PhysXDoFConstraint::SetAngularLowerLimit(const EulerAngles &lim)
 {
 	// TODO
 }
-void pragma::physics::PxDoFConstraint::SetAngularUpperLimit(const EulerAngles &lim)
+void pragma::physics::PhysXDoFConstraint::SetAngularUpperLimit(const EulerAngles &lim)
 {
 	// TODO
 }
 
-Vector3 pragma::physics::PxDoFConstraint::GetLinearLowerLimit() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetLinearLowerLimit() const
 {
 	// TODO
 	return Vector3{};
 }
-Vector3 pragma::physics::PxDoFConstraint::GetlinearUpperLimit() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetlinearUpperLimit() const
 {
 	// TODO
 	return Vector3{};
 }
-EulerAngles pragma::physics::PxDoFConstraint::GetAngularLowerLimit() const
+EulerAngles pragma::physics::PhysXDoFConstraint::GetAngularLowerLimit() const
 {
 	// TODO
 	return EulerAngles{};
 }
-EulerAngles pragma::physics::PxDoFConstraint::GetAngularUpperLimit() const
+EulerAngles pragma::physics::PhysXDoFConstraint::GetAngularUpperLimit() const
 {
 	// TODO
 	return EulerAngles{};
 }
 
-Vector3 pragma::physics::PxDoFConstraint::GetAngularTargetVelocity() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetAngularTargetVelocity() const
 {
 	// TODO
 	return Vector3{};
 }
-void pragma::physics::PxDoFConstraint::SetAngularTargetVelocity(const Vector3 &vel) const
+void pragma::physics::PhysXDoFConstraint::SetAngularTargetVelocity(const Vector3 &vel) const
 {
 	// TODO
 }
-Vector3 pragma::physics::PxDoFConstraint::GetAngularMaxMotorForce() const
-{
-	// TODO
-	return Vector3{};
-}
-void pragma::physics::PxDoFConstraint::SetAngularMaxMotorForce(const Vector3 &force)
-{
-	// TODO
-}
-Vector3 pragma::physics::PxDoFConstraint::GetAngularMaxLimitForce() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetAngularMaxMotorForce() const
 {
 	// TODO
 	return Vector3{};
 }
-void pragma::physics::PxDoFConstraint::SetAngularMaxLimitForce(const Vector3 &force)
+void pragma::physics::PhysXDoFConstraint::SetAngularMaxMotorForce(const Vector3 &force)
 {
 	// TODO
 }
-Vector3 pragma::physics::PxDoFConstraint::GetAngularDamping() const
-{
-	// TODO
-	return Vector3{};
-}
-void pragma::physics::PxDoFConstraint::SetAngularDamping(const Vector3 &damping)
-{
-	// TODO
-}
-Vector3 pragma::physics::PxDoFConstraint::GetAngularLimitSoftness() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetAngularMaxLimitForce() const
 {
 	// TODO
 	return Vector3{};
 }
-void pragma::physics::PxDoFConstraint::SetAngularLimitSoftness(const Vector3 &softness)
+void pragma::physics::PhysXDoFConstraint::SetAngularMaxLimitForce(const Vector3 &force)
 {
 	// TODO
 }
-Vector3 pragma::physics::PxDoFConstraint::GetAngularForceMixingFactor() const
-{
-	// TODO
-	return Vector3{};
-}
-void pragma::physics::PxDoFConstraint::SetAngularForceMixingFactor(const Vector3 &factor)
-{
-	// TODO
-}
-Vector3 pragma::physics::PxDoFConstraint::GetAngularLimitErrorTolerance() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetAngularDamping() const
 {
 	// TODO
 	return Vector3{};
 }
-void pragma::physics::PxDoFConstraint::SetAngularLimitErrorTolerance(const Vector3 &tolerance)
+void pragma::physics::PhysXDoFConstraint::SetAngularDamping(const Vector3 &damping)
 {
 	// TODO
 }
-Vector3 pragma::physics::PxDoFConstraint::GetAngularLimitForceMixingFactor() const
-{
-	// TODO
-	return Vector3{};
-}
-void pragma::physics::PxDoFConstraint::SetAngularLimitForceMixingFactor(const Vector3 &factor)
-{
-	// TODO
-}
-Vector3 pragma::physics::PxDoFConstraint::GetAngularRestitutionFactor() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetAngularLimitSoftness() const
 {
 	// TODO
 	return Vector3{};
 }
-void pragma::physics::PxDoFConstraint::SetAngularRestitutionFactor(const Vector3 &factor)
+void pragma::physics::PhysXDoFConstraint::SetAngularLimitSoftness(const Vector3 &softness)
 {
 	// TODO
 }
-bool pragma::physics::PxDoFConstraint::IsAngularMotorEnabled(uint8_t axis) const
+Vector3 pragma::physics::PhysXDoFConstraint::GetAngularForceMixingFactor() const
+{
+	// TODO
+	return Vector3{};
+}
+void pragma::physics::PhysXDoFConstraint::SetAngularForceMixingFactor(const Vector3 &factor)
+{
+	// TODO
+}
+Vector3 pragma::physics::PhysXDoFConstraint::GetAngularLimitErrorTolerance() const
+{
+	// TODO
+	return Vector3{};
+}
+void pragma::physics::PhysXDoFConstraint::SetAngularLimitErrorTolerance(const Vector3 &tolerance)
+{
+	// TODO
+}
+Vector3 pragma::physics::PhysXDoFConstraint::GetAngularLimitForceMixingFactor() const
+{
+	// TODO
+	return Vector3{};
+}
+void pragma::physics::PhysXDoFConstraint::SetAngularLimitForceMixingFactor(const Vector3 &factor)
+{
+	// TODO
+}
+Vector3 pragma::physics::PhysXDoFConstraint::GetAngularRestitutionFactor() const
+{
+	// TODO
+	return Vector3{};
+}
+void pragma::physics::PhysXDoFConstraint::SetAngularRestitutionFactor(const Vector3 &factor)
+{
+	// TODO
+}
+bool pragma::physics::PhysXDoFConstraint::IsAngularMotorEnabled(uint8_t axis) const
 {
 	// TODO
 	return false;
 }
-void pragma::physics::PxDoFConstraint::SetAngularMotorEnabled(uint8_t axis,bool bEnabled)
+void pragma::physics::PhysXDoFConstraint::SetAngularMotorEnabled(uint8_t axis,bool bEnabled)
 {
 	// TODO
 }
-Vector3 pragma::physics::PxDoFConstraint::GetCurrentAngularLimitError() const
-{
-	// TODO
-	return Vector3{};
-}
-Vector3 pragma::physics::PxDoFConstraint::GetCurrentAngularPosition() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetCurrentAngularLimitError() const
 {
 	// TODO
 	return Vector3{};
 }
-Vector3i pragma::physics::PxDoFConstraint::GetCurrentAngularLimit() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetCurrentAngularPosition() const
+{
+	// TODO
+	return Vector3{};
+}
+Vector3i pragma::physics::PhysXDoFConstraint::GetCurrentAngularLimit() const
 {
 	// TODO
 	return Vector3i{};
 }
-Vector3 pragma::physics::PxDoFConstraint::GetCurrentAngularAccumulatedImpulse() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetCurrentAngularAccumulatedImpulse() const
 {
 	// TODO
 	return Vector3{};
 }
 
-Vector3 pragma::physics::PxDoFConstraint::GetLinearTargetVelocity() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetLinearTargetVelocity() const
 {
 	// TODO
 	return Vector3{};
 }
-void pragma::physics::PxDoFConstraint::SetLinearTargetVelocity(const Vector3 &vel) const
+void pragma::physics::PhysXDoFConstraint::SetLinearTargetVelocity(const Vector3 &vel) const
 {
 	// TODO
 }
-Vector3 pragma::physics::PxDoFConstraint::GetLinearMaxMotorForce() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetLinearMaxMotorForce() const
 {
 	// TODO
 	return Vector3{};
 }
-void pragma::physics::PxDoFConstraint::SetLinearMaxMotorForce(const Vector3 &force)
+void pragma::physics::PhysXDoFConstraint::SetLinearMaxMotorForce(const Vector3 &force)
 {
 	// TODO
 }
-float pragma::physics::PxDoFConstraint::GetLinearDamping() const
+float pragma::physics::PhysXDoFConstraint::GetLinearDamping() const
 {
 	// TODO
 	return 0.f;
 }
-void pragma::physics::PxDoFConstraint::SetLinearDamping(float damping)
+void pragma::physics::PhysXDoFConstraint::SetLinearDamping(float damping)
 {
 	// TODO
 }
-float pragma::physics::PxDoFConstraint::GetLinearLimitSoftness() const
-{
-	// TODO
-	return 0.f;
-}
-void pragma::physics::PxDoFConstraint::SetLinearLimitSoftness(float softness)
-{
-	// TODO
-}
-Vector3 pragma::physics::PxDoFConstraint::GetLinearForceMixingFactor() const
-{
-	// TODO
-	return Vector3{};
-}
-void pragma::physics::PxDoFConstraint::SetLinearForceMixingFactor(const Vector3 &factor)
-{
-	// TODO
-}
-Vector3 pragma::physics::PxDoFConstraint::GetLinearLimitErrorTolerance() const
-{
-	// TODO
-	return Vector3{};
-}
-void pragma::physics::PxDoFConstraint::SetLinearLimitErrorTolerance(const Vector3 &tolerance)
-{
-	// TODO
-}
-Vector3 pragma::physics::PxDoFConstraint::GetLinearLimitForceMixingFactor() const
-{
-	// TODO
-	return Vector3{};
-}
-void pragma::physics::PxDoFConstraint::SetLinearLimitForceMixingFactor(const Vector3 &factor)
-{
-	// TODO
-}
-float pragma::physics::PxDoFConstraint::GetLinearRestitutionFactor() const
+float pragma::physics::PhysXDoFConstraint::GetLinearLimitSoftness() const
 {
 	// TODO
 	return 0.f;
 }
-void pragma::physics::PxDoFConstraint::SetLinearRestitutionFactor(float factor)
+void pragma::physics::PhysXDoFConstraint::SetLinearLimitSoftness(float softness)
 {
 	// TODO
 }
-bool pragma::physics::PxDoFConstraint::IsLinearMotorEnabled(uint8_t axis) const
+Vector3 pragma::physics::PhysXDoFConstraint::GetLinearForceMixingFactor() const
+{
+	// TODO
+	return Vector3{};
+}
+void pragma::physics::PhysXDoFConstraint::SetLinearForceMixingFactor(const Vector3 &factor)
+{
+	// TODO
+}
+Vector3 pragma::physics::PhysXDoFConstraint::GetLinearLimitErrorTolerance() const
+{
+	// TODO
+	return Vector3{};
+}
+void pragma::physics::PhysXDoFConstraint::SetLinearLimitErrorTolerance(const Vector3 &tolerance)
+{
+	// TODO
+}
+Vector3 pragma::physics::PhysXDoFConstraint::GetLinearLimitForceMixingFactor() const
+{
+	// TODO
+	return Vector3{};
+}
+void pragma::physics::PhysXDoFConstraint::SetLinearLimitForceMixingFactor(const Vector3 &factor)
+{
+	// TODO
+}
+float pragma::physics::PhysXDoFConstraint::GetLinearRestitutionFactor() const
+{
+	// TODO
+	return 0.f;
+}
+void pragma::physics::PhysXDoFConstraint::SetLinearRestitutionFactor(float factor)
+{
+	// TODO
+}
+bool pragma::physics::PhysXDoFConstraint::IsLinearMotorEnabled(uint8_t axis) const
 {
 	// TODO
 	return false;
 }
-void pragma::physics::PxDoFConstraint::SetLinearMotorEnabled(uint8_t axis,bool bEnabled)
+void pragma::physics::PhysXDoFConstraint::SetLinearMotorEnabled(uint8_t axis,bool bEnabled)
 {
 	// TODO
 }
-Vector3 pragma::physics::PxDoFConstraint::GetCurrentLinearDifference() const
-{
-	// TODO
-	return Vector3{};
-}
-Vector3 pragma::physics::PxDoFConstraint::GetCurrentLinearLimitError() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetCurrentLinearDifference() const
 {
 	// TODO
 	return Vector3{};
 }
-Vector3i pragma::physics::PxDoFConstraint::GetCurrentLinearLimit() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetCurrentLinearLimitError() const
+{
+	// TODO
+	return Vector3{};
+}
+Vector3i pragma::physics::PhysXDoFConstraint::GetCurrentLinearLimit() const
 {
 	// TODO
 	return Vector3i{};
 }
-Vector3 pragma::physics::PxDoFConstraint::GetCurrentLinearAccumulatedImpulse() const
+Vector3 pragma::physics::PhysXDoFConstraint::GetCurrentLinearAccumulatedImpulse() const
 {
 	// TODO
 	return Vector3{};
@@ -379,217 +379,217 @@ Vector3 pragma::physics::PxDoFConstraint::GetCurrentLinearAccumulatedImpulse() c
 
 /////////////
 
-pragma::physics::PxDoFSpringConstraint::PxDoFSpringConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c)
-	: IDoFSpringConstraint{env},PxConstraint{env,std::move(c)},IConstraint{env}
+pragma::physics::PhysXDoFSpringConstraint::PhysXDoFSpringConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c)
+	: IDoFSpringConstraint{env},PhysXConstraint{env,std::move(c)},IConstraint{env}
 {}
-void pragma::physics::PxDoFSpringConstraint::CalculateTransforms()
+void pragma::physics::PhysXDoFSpringConstraint::CalculateTransforms()
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::CalculateTransforms(const Transform &frameA,const Transform &frameB)
+void pragma::physics::PhysXDoFSpringConstraint::CalculateTransforms(const Transform &frameA,const Transform &frameB)
 {
 	// TODO
 }
-pragma::physics::Transform pragma::physics::PxDoFSpringConstraint::GetCalculatedTransformA() const
-{
-	// TODO
-	return {};
-}
-pragma::physics::Transform pragma::physics::PxDoFSpringConstraint::GetCalculatedTransformB() const
+pragma::physics::Transform pragma::physics::PhysXDoFSpringConstraint::GetCalculatedTransformA() const
 {
 	// TODO
 	return {};
 }
-pragma::physics::Transform pragma::physics::PxDoFSpringConstraint::GetFrameOffsetA() const
+pragma::physics::Transform pragma::physics::PhysXDoFSpringConstraint::GetCalculatedTransformB() const
 {
 	// TODO
 	return {};
 }
-pragma::physics::Transform pragma::physics::PxDoFSpringConstraint::GetFrameOffsetB() const
+pragma::physics::Transform pragma::physics::PhysXDoFSpringConstraint::GetFrameOffsetA() const
 {
 	// TODO
 	return {};
 }
-Vector3 pragma::physics::PxDoFSpringConstraint::GetAxis(pragma::Axis axisIndex) const
+pragma::physics::Transform pragma::physics::PhysXDoFSpringConstraint::GetFrameOffsetB() const
 {
 	// TODO
 	return {};
 }
-double pragma::physics::PxDoFSpringConstraint::GetAngle(pragma::Axis axisIndex) const
+Vector3 pragma::physics::PhysXDoFSpringConstraint::GetAxis(pragma::Axis axisIndex) const
 {
 	// TODO
 	return {};
 }
-double pragma::physics::PxDoFSpringConstraint::GetRelativePivotPosition(pragma::Axis axisIndex) const
+double pragma::physics::PhysXDoFSpringConstraint::GetAngle(pragma::Axis axisIndex) const
 {
 	// TODO
 	return {};
 }
-void pragma::physics::PxDoFSpringConstraint::SetFrames(const Transform &frameA,const Transform &frameB)
-{
-	// TODO
-}
-void pragma::physics::PxDoFSpringConstraint::SetLinearLowerLimit(const Vector3 &linearLower)
-{
-	// TODO
-}
-Vector3 pragma::physics::PxDoFSpringConstraint::GetLinearLowerLimit() const
+double pragma::physics::PhysXDoFSpringConstraint::GetRelativePivotPosition(pragma::Axis axisIndex) const
 {
 	// TODO
 	return {};
 }
-void pragma::physics::PxDoFSpringConstraint::SetLinearUpperLimit(const Vector3 &linearUpper)
+void pragma::physics::PhysXDoFSpringConstraint::SetFrames(const Transform &frameA,const Transform &frameB)
 {
 	// TODO
 }
-Vector3 pragma::physics::PxDoFSpringConstraint::GetLinearUpperLimit() const
-{
-	// TODO
-	return {};
-}
-void pragma::physics::PxDoFSpringConstraint::SetAngularLowerLimit(const Vector3 &angularLower)
+void pragma::physics::PhysXDoFSpringConstraint::SetLinearLowerLimit(const Vector3 &linearLower)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::SetAngularLowerLimitReversed(const Vector3 &angularLower)
-{
-	// TODO
-}
-Vector3 pragma::physics::PxDoFSpringConstraint::GetAngularLowerLimit() const
+Vector3 pragma::physics::PhysXDoFSpringConstraint::GetLinearLowerLimit() const
 {
 	// TODO
 	return {};
 }
-Vector3 pragma::physics::PxDoFSpringConstraint::GetAngularLowerLimitReversed() const
+void pragma::physics::PhysXDoFSpringConstraint::SetLinearUpperLimit(const Vector3 &linearUpper)
+{
+	// TODO
+}
+Vector3 pragma::physics::PhysXDoFSpringConstraint::GetLinearUpperLimit() const
 {
 	// TODO
 	return {};
 }
-void pragma::physics::PxDoFSpringConstraint::SetAngularUpperLimit(const Vector3 &angularUpper)
+void pragma::physics::PhysXDoFSpringConstraint::SetAngularLowerLimit(const Vector3 &angularLower)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::SetAngularUpperLimitReversed(const Vector3 &angularUpper)
+void pragma::physics::PhysXDoFSpringConstraint::SetAngularLowerLimitReversed(const Vector3 &angularLower)
 {
 	// TODO
 }
-Vector3 pragma::physics::PxDoFSpringConstraint::GetAngularUpperLimit() const
-{
-	// TODO
-	return {};
-}
-Vector3 pragma::physics::PxDoFSpringConstraint::GetAngularUpperLimitReversed() const
+Vector3 pragma::physics::PhysXDoFSpringConstraint::GetAngularLowerLimit() const
 {
 	// TODO
 	return {};
 }
-void pragma::physics::PxDoFSpringConstraint::SetLimit(AxisType type,pragma::Axis axis,double lo,double hi)
-{
-	// TODO
-}
-void pragma::physics::PxDoFSpringConstraint::SetLimitReversed(AxisType type,pragma::Axis axis,double lo,double hi)
-{
-	// TODO
-}
-bool pragma::physics::PxDoFSpringConstraint::IsLimited(AxisType type,pragma::Axis axis) const
+Vector3 pragma::physics::PhysXDoFSpringConstraint::GetAngularLowerLimitReversed() const
 {
 	// TODO
 	return {};
 }
-void pragma::physics::PxDoFSpringConstraint::SetRotationOrder(pragma::RotationOrder order)
+void pragma::physics::PhysXDoFSpringConstraint::SetAngularUpperLimit(const Vector3 &angularUpper)
 {
 	// TODO
 }
-pragma::RotationOrder pragma::physics::PxDoFSpringConstraint::GetRotationOrder() const
+void pragma::physics::PhysXDoFSpringConstraint::SetAngularUpperLimitReversed(const Vector3 &angularUpper)
+{
+	// TODO
+}
+Vector3 pragma::physics::PhysXDoFSpringConstraint::GetAngularUpperLimit() const
 {
 	// TODO
 	return {};
 }
-void pragma::physics::PxDoFSpringConstraint::SetAxis(const Vector3 &axis1,const Vector3 &axis2)
+Vector3 pragma::physics::PhysXDoFSpringConstraint::GetAngularUpperLimitReversed() const
+{
+	// TODO
+	return {};
+}
+void pragma::physics::PhysXDoFSpringConstraint::SetLimit(AxisType type,pragma::Axis axis,double lo,double hi)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::SetBounce(AxisType type,pragma::Axis axis,double bounce)
+void pragma::physics::PhysXDoFSpringConstraint::SetLimitReversed(AxisType type,pragma::Axis axis,double lo,double hi)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::EnableMotor(AxisType type,pragma::Axis axis,bool onOff)
+bool pragma::physics::PhysXDoFSpringConstraint::IsLimited(AxisType type,pragma::Axis axis) const
+{
+	// TODO
+	return {};
+}
+void pragma::physics::PhysXDoFSpringConstraint::SetRotationOrder(pragma::RotationOrder order)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::SetServo(AxisType type,pragma::Axis axis,bool onOff)
+pragma::RotationOrder pragma::physics::PhysXDoFSpringConstraint::GetRotationOrder() const
+{
+	// TODO
+	return {};
+}
+void pragma::physics::PhysXDoFSpringConstraint::SetAxis(const Vector3 &axis1,const Vector3 &axis2)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::SetTargetVelocity(AxisType type,pragma::Axis axis,double velocity)
+void pragma::physics::PhysXDoFSpringConstraint::SetBounce(AxisType type,pragma::Axis axis,double bounce)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::SetServoTarget(AxisType type,pragma::Axis axis,double target)
+void pragma::physics::PhysXDoFSpringConstraint::EnableMotor(AxisType type,pragma::Axis axis,bool onOff)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::SetMaxMotorForce(AxisType type,pragma::Axis axis,double force)
+void pragma::physics::PhysXDoFSpringConstraint::SetServo(AxisType type,pragma::Axis axis,bool onOff)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::EnableSpring(AxisType type,pragma::Axis axis,bool onOff)
+void pragma::physics::PhysXDoFSpringConstraint::SetTargetVelocity(AxisType type,pragma::Axis axis,double velocity)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::SetStiffness(AxisType type,pragma::Axis axis,double stiffness,bool limitIfNeeded)
+void pragma::physics::PhysXDoFSpringConstraint::SetServoTarget(AxisType type,pragma::Axis axis,double target)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::SetDamping(AxisType type,pragma::Axis axis,double damping,bool limitIfNeeded)
+void pragma::physics::PhysXDoFSpringConstraint::SetMaxMotorForce(AxisType type,pragma::Axis axis,double force)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::SetEquilibriumPoint()
+void pragma::physics::PhysXDoFSpringConstraint::EnableSpring(AxisType type,pragma::Axis axis,bool onOff)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::SetEquilibriumPoint(AxisType type,pragma::Axis axis)
+void pragma::physics::PhysXDoFSpringConstraint::SetStiffness(AxisType type,pragma::Axis axis,double stiffness,bool limitIfNeeded)
 {
 	// TODO
 }
-void pragma::physics::PxDoFSpringConstraint::SetEquilibriumPoint(AxisType type,pragma::Axis axis,double val)
+void pragma::physics::PhysXDoFSpringConstraint::SetDamping(AxisType type,pragma::Axis axis,double damping,bool limitIfNeeded)
+{
+	// TODO
+}
+void pragma::physics::PhysXDoFSpringConstraint::SetEquilibriumPoint()
+{
+	// TODO
+}
+void pragma::physics::PhysXDoFSpringConstraint::SetEquilibriumPoint(AxisType type,pragma::Axis axis)
+{
+	// TODO
+}
+void pragma::physics::PhysXDoFSpringConstraint::SetEquilibriumPoint(AxisType type,pragma::Axis axis,double val)
 {
 	// TODO
 }
 
-void pragma::physics::PxDoFSpringConstraint::SetERP(AxisType type,pragma::Axis axis,double value)
+void pragma::physics::PhysXDoFSpringConstraint::SetERP(AxisType type,pragma::Axis axis,double value)
 {
 	// TODO
 }
-double pragma::physics::PxDoFSpringConstraint::GetERP(AxisType type,pragma::Axis axis) const
-{
-	// TODO
-	return {};
-}
-void pragma::physics::PxDoFSpringConstraint::SetStopERP(AxisType type,pragma::Axis axis,double value)
-{
-	// TODO
-}
-double pragma::physics::PxDoFSpringConstraint::GetStopERP(AxisType type,pragma::Axis axis) const
+double pragma::physics::PhysXDoFSpringConstraint::GetERP(AxisType type,pragma::Axis axis) const
 {
 	// TODO
 	return {};
 }
-void pragma::physics::PxDoFSpringConstraint::SetCFM(AxisType type,pragma::Axis axis,double value)
+void pragma::physics::PhysXDoFSpringConstraint::SetStopERP(AxisType type,pragma::Axis axis,double value)
 {
 	// TODO
 }
-double pragma::physics::PxDoFSpringConstraint::GetCFM(AxisType type,pragma::Axis axis) const
+double pragma::physics::PhysXDoFSpringConstraint::GetStopERP(AxisType type,pragma::Axis axis) const
 {
 	// TODO
 	return {};
 }
-void pragma::physics::PxDoFSpringConstraint::SetStopCFM(AxisType type,pragma::Axis axis,double value)
+void pragma::physics::PhysXDoFSpringConstraint::SetCFM(AxisType type,pragma::Axis axis,double value)
 {
 	// TODO
 }
-double pragma::physics::PxDoFSpringConstraint::GetStopCFM(AxisType type,pragma::Axis axis) const
+double pragma::physics::PhysXDoFSpringConstraint::GetCFM(AxisType type,pragma::Axis axis) const
+{
+	// TODO
+	return {};
+}
+void pragma::physics::PhysXDoFSpringConstraint::SetStopCFM(AxisType type,pragma::Axis axis,double value)
+{
+	// TODO
+}
+double pragma::physics::PhysXDoFSpringConstraint::GetStopCFM(AxisType type,pragma::Axis axis) const
 {
 	// TODO
 	return {};

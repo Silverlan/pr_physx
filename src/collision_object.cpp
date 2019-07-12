@@ -5,60 +5,68 @@
 #include <extensions/PxRigidBodyExt.h>
 
 #pragma optimize("",off)
-pragma::physics::PxCollisionObject &pragma::physics::PxCollisionObject::GetCollisionObject(ICollisionObject &o)
+pragma::physics::PhysXCollisionObject &pragma::physics::PhysXCollisionObject::GetCollisionObject(ICollisionObject &o)
 {
-	return *static_cast<PxCollisionObject*>(o.GetUserData());
+	return *static_cast<PhysXCollisionObject*>(o.GetUserData());
 }
-const pragma::physics::PxCollisionObject &pragma::physics::PxCollisionObject::GetCollisionObject(const ICollisionObject &o) {return GetCollisionObject(const_cast<ICollisionObject&>(o));}
-pragma::physics::PxCollisionObject::PxCollisionObject(IEnvironment &env,PxUniquePtr<physx::PxActor> actor,IShape &shape)
+const pragma::physics::PhysXCollisionObject &pragma::physics::PhysXCollisionObject::GetCollisionObject(const ICollisionObject &o) {return GetCollisionObject(const_cast<ICollisionObject&>(o));}
+pragma::physics::PhysXCollisionObject::PhysXCollisionObject(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape)
 	: ICollisionObject{env,shape},m_actor{std::move(actor)}
 {
 	SetUserData(this);
 }
-void pragma::physics::PxCollisionObject::Initialize()
+void pragma::physics::PhysXCollisionObject::Initialize()
 {
 	ICollisionObject::Initialize();
 	GetInternalObject().userData = this;
 }
-physx::PxActor &pragma::physics::PxCollisionObject::GetInternalObject() const {return *m_actor;}
-pragma::physics::PxEnvironment &pragma::physics::PxCollisionObject::GetPxEnv() const {return static_cast<PxEnvironment&>(m_physEnv);}
-void pragma::physics::PxCollisionObject::GetAABB(Vector3 &min,Vector3 &max) const
+physx::PxActor &pragma::physics::PhysXCollisionObject::GetInternalObject() const {return *m_actor;}
+pragma::physics::PhysXEnvironment &pragma::physics::PhysXCollisionObject::GetPxEnv() const {return static_cast<PhysXEnvironment&>(m_physEnv);}
+void pragma::physics::PhysXCollisionObject::GetAABB(Vector3 &min,Vector3 &max) const
 {
 	auto bounds = m_actor->getWorldBounds();
 	min = GetPxEnv().FromPhysXVector(bounds.minimum);
 	max = GetPxEnv().FromPhysXVector(bounds.maximum);
 }
-void pragma::physics::PxCollisionObject::RemoveWorldObject()
+void pragma::physics::PhysXCollisionObject::SetSleepReportEnabled(bool reportEnabled)
+{
+	m_actor->setActorFlag(physx::PxActorFlag::eSEND_SLEEP_NOTIFIES,reportEnabled);
+}
+bool pragma::physics::PhysXCollisionObject::IsSleepReportEnabled() const
+{
+	return m_actor->getActorFlags().isSet(physx::PxActorFlag::eSEND_SLEEP_NOTIFIES);
+}
+void pragma::physics::PhysXCollisionObject::RemoveWorldObject()
 {
 	if(m_actor == nullptr || IsSpawned() == false)
 		return;
 	GetPxEnv().GetScene().removeActor(*m_actor);
 	m_actor = nullptr;
 }
-void pragma::physics::PxCollisionObject::DoAddWorldObject()
+void pragma::physics::PhysXCollisionObject::DoAddWorldObject()
 {
 	GetPxEnv().GetScene().addActor(*m_actor);
 }
 
 //////////////////
 
-pragma::physics::PxRigidBody::PxRigidBody(IEnvironment &env,PxUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia)
-	: PxCollisionObject{env,std::move(actor),shape},IRigidBody{env,mass,shape,localInertia},ICollisionObject{env,shape}
+pragma::physics::PhysXRigidBody::PhysXRigidBody(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia)
+	: PhysXCollisionObject{env,std::move(actor),shape},IRigidBody{env,mass,shape,localInertia},ICollisionObject{env,shape}
 {}
-physx::PxRigidActor &pragma::physics::PxRigidBody::GetInternalObject() const {return static_cast<physx::PxRigidDynamic&>(PxCollisionObject::GetInternalObject());}
+physx::PxRigidActor &pragma::physics::PhysXRigidBody::GetInternalObject() const {return static_cast<physx::PxRigidDynamic&>(PhysXCollisionObject::GetInternalObject());}
 
-void pragma::physics::PxRigidBody::SetContactProcessingThreshold(float threshold)
+void pragma::physics::PhysXRigidBody::SetContactProcessingThreshold(float threshold)
 {
 	// GetInternalObject().setContactReportThreshold();
 }
-Vector3 pragma::physics::PxRigidBody::GetPos() const
+Vector3 pragma::physics::PhysXRigidBody::GetPos() const
 {
 	auto *pController = GetController();
 	if(pController)
 		return pController->GetPos();
 	return GetPxEnv().FromPhysXVector(GetInternalObject().getGlobalPose().p);
 }
-void pragma::physics::PxRigidBody::SetPos(const Vector3 &pos)
+void pragma::physics::PhysXRigidBody::SetPos(const Vector3 &pos)
 {
 	auto *pController = GetController();
 	if(pController)
@@ -73,7 +81,7 @@ void pragma::physics::PxRigidBody::SetPos(const Vector3 &pos)
 	pose.p = GetPxEnv().ToPhysXVector(pos);
 	GetInternalObject().setGlobalPose(pose);
 }
-Quat pragma::physics::PxRigidBody::GetRotation() const
+Quat pragma::physics::PhysXRigidBody::GetRotation() const
 {
 	auto *pController = GetController();
 	if(pController)
@@ -83,7 +91,7 @@ Quat pragma::physics::PxRigidBody::GetRotation() const
 	}
 	return GetPxEnv().FromPhysXRotation(GetInternalObject().getGlobalPose().q);
 }
-void pragma::physics::PxRigidBody::SetRotation(const Quat &rot)
+void pragma::physics::PhysXRigidBody::SetRotation(const Quat &rot)
 {
 	auto *pController = GetController();
 	if(pController)
@@ -95,12 +103,12 @@ void pragma::physics::PxRigidBody::SetRotation(const Quat &rot)
 	pose.q = GetPxEnv().ToPhysXRotation(rot);
 	GetInternalObject().setGlobalPose(pose);
 }
-pragma::physics::Transform pragma::physics::PxRigidBody::GetWorldTransform()
+pragma::physics::Transform pragma::physics::PhysXRigidBody::GetWorldTransform()
 {
 	auto t = GetInternalObject().getGlobalPose();
 	return GetPxEnv().CreateTransform(t);
 }
-void pragma::physics::PxRigidBody::SetWorldTransform(const Transform &t)
+void pragma::physics::PhysXRigidBody::SetWorldTransform(const Transform &t)
 {
 	auto *pController = GetController();
 	if(pController)
@@ -114,38 +122,38 @@ void pragma::physics::PxRigidBody::SetWorldTransform(const Transform &t)
 	GetInternalObject().setGlobalPose(pxPose);
 }
 
-bool pragma::physics::PxRigidBody::IsTrigger()
+bool pragma::physics::PhysXRigidBody::IsTrigger()
 {
 	auto *pShape = GetCollisionShape();
 	return pShape ? pShape->IsTrigger() : false;
 }
 
-void pragma::physics::PxRigidBody::SetSimulationEnabled(bool b)
+void pragma::physics::PhysXRigidBody::SetSimulationEnabled(bool b)
 {
 	GetInternalObject().setActorFlag(physx::PxActorFlag::eDISABLE_SIMULATION,!b);
 }
-bool pragma::physics::PxRigidBody::IsSimulationEnabled() const
+bool pragma::physics::PhysXRigidBody::IsSimulationEnabled() const
 {
 	return GetInternalObject().getActorFlags().isSet(physx::PxActorFlag::eDISABLE_SIMULATION);
 }
-void pragma::physics::PxRigidBody::SetCollisionsEnabled(bool enabled)
+void pragma::physics::PhysXRigidBody::SetCollisionsEnabled(bool enabled)
 {
 	// TODO
 }
-void pragma::physics::PxRigidBody::RemoveWorldObject()
+void pragma::physics::PhysXRigidBody::RemoveWorldObject()
 {
 	if(m_controller.GetRawPtr() != nullptr)
 		return; // Controller manages lifetime of rigid body
-	PxCollisionObject::RemoveWorldObject();
+	PhysXCollisionObject::RemoveWorldObject();
 }
-void pragma::physics::PxRigidBody::DoAddWorldObject()
+void pragma::physics::PhysXRigidBody::DoAddWorldObject()
 {
 	if(m_controller.GetRawPtr() != nullptr)
 		return; // Controller manages lifetime of rigid body
-	PxCollisionObject::DoAddWorldObject();
+	PhysXCollisionObject::DoAddWorldObject();
 }
 
-void pragma::physics::PxRigidBody::ApplyCollisionShape(pragma::physics::IShape *optShape)
+void pragma::physics::PhysXRigidBody::ApplyCollisionShape(pragma::physics::IShape *optShape)
 {
 	auto &o = GetInternalObject();
 	// Clear all current shapes
@@ -155,7 +163,7 @@ void pragma::physics::PxRigidBody::ApplyCollisionShape(pragma::physics::IShape *
 	for(auto i=decltype(numShapes){0u};i<numShapes;++i)
 	{
 		auto *pShape = shapes.at(i);
-		if(optShape != nullptr && pShape == &PxShape::GetShape(*optShape).GetInternalObject())
+		if(optShape != nullptr && pShape == &PhysXShape::GetShape(*optShape).GetInternalObject())
 			continue;
 		o.detachShape(*pShape);
 	}
@@ -164,61 +172,61 @@ void pragma::physics::PxRigidBody::ApplyCollisionShape(pragma::physics::IShape *
 		return;
 	if(optShape->IsCompoundShape() == false)
 	{
-		o.attachShape(PxShape::GetShape(*optShape).GetInternalObject());
+		o.attachShape(PhysXShape::GetShape(*optShape).GetInternalObject());
 		return;
 	}
-	auto &compoundShape = static_cast<PxCompoundShape&>(PxShape::GetShape(*optShape));
+	auto &compoundShape = static_cast<PhysXCompoundShape&>(PhysXShape::GetShape(*optShape));
 	auto &subShapes = compoundShape.GetShapes();
 	for(auto i=decltype(subShapes.size()){0u};i<subShapes.size();++i)
 	{
 		auto &shape = subShapes.at(i);
 		if(shape->IsCompoundShape() == false)
 			continue; // Compound shapes of compound shapes currently not supported
-		o.attachShape(PxShape::GetShape(*shape).GetInternalObject());
+		o.attachShape(PhysXShape::GetShape(*shape).GetInternalObject());
 	}
 }
-void pragma::physics::PxRigidBody::DoSetCollisionFilterGroup(CollisionMask group)
+void pragma::physics::PhysXRigidBody::DoSetCollisionFilterGroup(CollisionMask group)
 {
 	// TODO
 }
-void pragma::physics::PxRigidBody::DoSetCollisionFilterMask(CollisionMask mask)
+void pragma::physics::PhysXRigidBody::DoSetCollisionFilterMask(CollisionMask mask)
 {
 	// TODO
 }
-void pragma::physics::PxRigidBody::SetMassProps(float mass,const Vector3 &inertia)
+void pragma::physics::PhysXRigidBody::SetMassProps(float mass,const Vector3 &inertia)
 {
 	// TODO
 }
-Vector3 &pragma::physics::PxRigidBody::GetInertia()
+Vector3 &pragma::physics::PhysXRigidBody::GetInertia()
 {
 	// TODO
 	return Vector3{};
 }
-Mat3 pragma::physics::PxRigidBody::GetInvInertiaTensorWorld() const
+Mat3 pragma::physics::PhysXRigidBody::GetInvInertiaTensorWorld() const
 {
 	// TODO
 	return Mat3{};
 }
-void pragma::physics::PxRigidBody::SetInertia(const Vector3 &inertia)
+void pragma::physics::PhysXRigidBody::SetInertia(const Vector3 &inertia)
 {
 	// TODO
 }
-void pragma::physics::PxRigidBody::SetController(PxController &controller)
+void pragma::physics::PhysXRigidBody::SetController(PhysXController &controller)
 {
-	m_controller = util::weak_shared_handle_cast<IBase,PxController>(controller.GetHandle());
+	m_controller = util::weak_shared_handle_cast<IBase,PhysXController>(controller.GetHandle());
 }
-pragma::physics::PxController *pragma::physics::PxRigidBody::GetController() const
+pragma::physics::PhysXController *pragma::physics::PhysXRigidBody::GetController() const
 {
 	return m_controller.Get();
 }
 
 //////////////////
 
-pragma::physics::PxRigidDynamic::PxRigidDynamic(IEnvironment &env,PxUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia)
-	: PxRigidBody{env,std::move(actor),shape,mass,localInertia},ICollisionObject{env,shape},IRigidBody{env,mass,shape,localInertia}
+pragma::physics::PhysXRigidDynamic::PhysXRigidDynamic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia)
+	: PhysXRigidBody{env,std::move(actor),shape,mass,localInertia},ICollisionObject{env,shape},IRigidBody{env,mass,shape,localInertia}
 {}
-physx::PxRigidDynamic &pragma::physics::PxRigidDynamic::GetInternalObject() const {return static_cast<physx::PxRigidDynamic&>(PxRigidBody::GetInternalObject());}
-void pragma::physics::PxRigidDynamic::SetActivationState(ActivationState state)
+physx::PxRigidDynamic &pragma::physics::PhysXRigidDynamic::GetInternalObject() const {return static_cast<physx::PxRigidDynamic&>(PhysXRigidBody::GetInternalObject());}
+void pragma::physics::PhysXRigidDynamic::SetActivationState(ActivationState state)
 {
 	switch(state)
 	{
@@ -234,153 +242,153 @@ void pragma::physics::PxRigidDynamic::SetActivationState(ActivationState state)
 	// TODO
 	//GetInternalObject().setSleepThreshold
 }
-pragma::physics::ICollisionObject::ActivationState pragma::physics::PxRigidDynamic::GetActivationState() const
+pragma::physics::ICollisionObject::ActivationState pragma::physics::PhysXRigidDynamic::GetActivationState() const
 {
 	if(GetInternalObject().isSleeping())
 		return ActivationState::Asleep;
 	return ActivationState::Active;
 }
 
-void pragma::physics::PxRigidDynamic::ApplyForce(const Vector3 &force)
+void pragma::physics::PhysXRigidDynamic::ApplyForce(const Vector3 &force)
 {
 	GetInternalObject().addForce(GetPxEnv().ToPhysXVector(force),physx::PxForceMode::eFORCE);
 }
-void pragma::physics::PxRigidDynamic::ApplyForce(const Vector3 &force,const Vector3 &relPos)
+void pragma::physics::PhysXRigidDynamic::ApplyForce(const Vector3 &force,const Vector3 &relPos)
 {
 	physx::PxRigidBodyExt::addForceAtLocalPos(GetInternalObject(),GetPxEnv().ToPhysXVector(force),GetPxEnv().ToPhysXVector(relPos),physx::PxForceMode::eFORCE);
 }
-void pragma::physics::PxRigidDynamic::ApplyImpulse(const Vector3 &impulse)
+void pragma::physics::PhysXRigidDynamic::ApplyImpulse(const Vector3 &impulse)
 {
 	GetInternalObject().addForce(GetPxEnv().ToPhysXVector(impulse),physx::PxForceMode::eIMPULSE);
 }
-void pragma::physics::PxRigidDynamic::ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos)
+void pragma::physics::PhysXRigidDynamic::ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos)
 {
 	physx::PxRigidBodyExt::addForceAtLocalPos(GetInternalObject(),GetPxEnv().ToPhysXVector(impulse),GetPxEnv().ToPhysXVector(relPos),physx::PxForceMode::eIMPULSE);
 }
-void pragma::physics::PxRigidDynamic::ApplyTorque(const Vector3 &torque)
+void pragma::physics::PhysXRigidDynamic::ApplyTorque(const Vector3 &torque)
 {
 	GetInternalObject().addTorque(GetPxEnv().ToPhysXTorque(torque),physx::PxForceMode::eFORCE);
 }
-void pragma::physics::PxRigidDynamic::ApplyTorqueImpulse(const Vector3 &torque)
+void pragma::physics::PhysXRigidDynamic::ApplyTorqueImpulse(const Vector3 &torque)
 {
 	GetInternalObject().addTorque(GetPxEnv().ToPhysXTorque(torque),physx::PxForceMode::eIMPULSE);
 }
-void pragma::physics::PxRigidDynamic::ClearForces()
+void pragma::physics::PhysXRigidDynamic::ClearForces()
 {
 	GetInternalObject().clearForce(physx::PxForceMode::eACCELERATION);
 	GetInternalObject().clearForce(physx::PxForceMode::eVELOCITY_CHANGE);
 	GetInternalObject().clearTorque(physx::PxForceMode::eACCELERATION);
 	GetInternalObject().clearTorque(physx::PxForceMode::eVELOCITY_CHANGE);
 }
-Vector3 pragma::physics::PxRigidDynamic::GetTotalForce() const
+Vector3 pragma::physics::PhysXRigidDynamic::GetTotalForce() const
 {
 	// TODO
 	return Vector3{};
 }
-Vector3 pragma::physics::PxRigidDynamic::GetTotalTorque() const
+Vector3 pragma::physics::PhysXRigidDynamic::GetTotalTorque() const
 {
 	// TODO
 	return Vector3{};
 }
-float pragma::physics::PxRigidDynamic::GetMass() const
+float pragma::physics::PhysXRigidDynamic::GetMass() const
 {
 	return GetInternalObject().getMass();
 }
-void pragma::physics::PxRigidDynamic::SetMass(float mass)
+void pragma::physics::PhysXRigidDynamic::SetMass(float mass)
 {
 	GetInternalObject().setMass(mass);
 }
-Vector3 pragma::physics::PxRigidDynamic::GetLinearVelocity() const
+Vector3 pragma::physics::PhysXRigidDynamic::GetLinearVelocity() const
 {
 	return GetPxEnv().FromPhysXVector(GetInternalObject().getLinearVelocity());
 }
-Vector3 pragma::physics::PxRigidDynamic::GetAngularVelocity() const
+Vector3 pragma::physics::PhysXRigidDynamic::GetAngularVelocity() const
 {
 	return GetPxEnv().FromPhysXVector(GetInternalObject().getAngularVelocity());
 }
-void pragma::physics::PxRigidDynamic::SetLinearVelocity(const Vector3 &vel)
+void pragma::physics::PhysXRigidDynamic::SetLinearVelocity(const Vector3 &vel)
 {
 	GetInternalObject().setLinearVelocity(GetPxEnv().ToPhysXVector(vel));
 }
-void pragma::physics::PxRigidDynamic::SetAngularVelocity(const Vector3 &vel)
+void pragma::physics::PhysXRigidDynamic::SetAngularVelocity(const Vector3 &vel)
 {
 	GetInternalObject().setAngularVelocity(GetPxEnv().ToPhysXVector(vel));
 }
-void pragma::physics::PxRigidDynamic::SetLinearFactor(const Vector3 &factor)
+void pragma::physics::PhysXRigidDynamic::SetLinearFactor(const Vector3 &factor)
 {
 	// TODO
 }
-void pragma::physics::PxRigidDynamic::SetAngularFactor(const Vector3 &factor)
+void pragma::physics::PhysXRigidDynamic::SetAngularFactor(const Vector3 &factor)
 {
 	// TODO
 }
-Vector3 pragma::physics::PxRigidDynamic::GetLinearFactor() const
-{
-	// TODO
-	return Vector3{};
-}
-Vector3 pragma::physics::PxRigidDynamic::GetAngularFactor() const
+Vector3 pragma::physics::PhysXRigidDynamic::GetLinearFactor() const
 {
 	// TODO
 	return Vector3{};
 }
-void pragma::physics::PxRigidDynamic::SetLinearDamping(float damping)
+Vector3 pragma::physics::PhysXRigidDynamic::GetAngularFactor() const
+{
+	// TODO
+	return Vector3{};
+}
+void pragma::physics::PhysXRigidDynamic::SetLinearDamping(float damping)
 {
 	GetInternalObject().setLinearDamping(damping);
 }
-void pragma::physics::PxRigidDynamic::SetAngularDamping(float damping)
+void pragma::physics::PhysXRigidDynamic::SetAngularDamping(float damping)
 {
 	GetInternalObject().setAngularDamping(damping);
 }
-float pragma::physics::PxRigidDynamic::GetLinearDamping() const
+float pragma::physics::PhysXRigidDynamic::GetLinearDamping() const
 {
 	return GetInternalObject().getLinearDamping();
 }
-float pragma::physics::PxRigidDynamic::GetAngularDamping() const
+float pragma::physics::PhysXRigidDynamic::GetAngularDamping() const
 {
 	return GetInternalObject().getAngularDamping();
 }
-void pragma::physics::PxRigidDynamic::SetLinearSleepingThreshold(float threshold)
+void pragma::physics::PhysXRigidDynamic::SetLinearSleepingThreshold(float threshold)
 {
 	GetInternalObject().setSleepThreshold(threshold);
 }
-void pragma::physics::PxRigidDynamic::SetAngularSleepingThreshold(float threshold)
+void pragma::physics::PhysXRigidDynamic::SetAngularSleepingThreshold(float threshold)
 {
 	// Not available in PhysX
 }
-float pragma::physics::PxRigidDynamic::GetLinearSleepingThreshold() const
+float pragma::physics::PhysXRigidDynamic::GetLinearSleepingThreshold() const
 {
 	return GetInternalObject().getSleepThreshold();
 }
-float pragma::physics::PxRigidDynamic::GetAngularSleepingThreshold() const
+float pragma::physics::PhysXRigidDynamic::GetAngularSleepingThreshold() const
 {
 	return GetInternalObject().getSleepThreshold();
 }
-void pragma::physics::PxRigidDynamic::SetKinematic(bool bKinematic)
+void pragma::physics::PhysXRigidDynamic::SetKinematic(bool bKinematic)
 {
 	GetInternalObject().setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC,bKinematic);
 }
-bool pragma::physics::PxRigidDynamic::IsKinematic() const
+bool pragma::physics::PhysXRigidDynamic::IsKinematic() const
 {
 	return GetInternalObject().getRigidBodyFlags().isSet(physx::PxRigidBodyFlag::eKINEMATIC);
 }
-void pragma::physics::PxRigidDynamic::WakeUp(bool forceActivation)
+void pragma::physics::PhysXRigidDynamic::WakeUp(bool forceActivation)
 {
 	GetInternalObject().wakeUp();
 }
-void pragma::physics::PxRigidDynamic::PutToSleep()
+void pragma::physics::PhysXRigidDynamic::PutToSleep()
 {
 	GetInternalObject().putToSleep();
 }
-bool pragma::physics::PxRigidDynamic::IsAsleep() const
+bool pragma::physics::PhysXRigidDynamic::IsAsleep() const
 {
 	return GetInternalObject().isSleeping();
 }
-bool pragma::physics::PxRigidDynamic::IsStatic() const
+bool pragma::physics::PhysXRigidDynamic::IsStatic() const
 {
 	return GetInternalObject().getRigidBodyFlags().isSet(physx::PxRigidBodyFlag::eKINEMATIC);
 }
-void pragma::physics::PxRigidDynamic::SetStatic(bool b)
+void pragma::physics::PhysXRigidDynamic::SetStatic(bool b)
 {
 	// Dynamic rigid bodies cannot be transformed into static rigid bodies in PhysX,
 	// so we'll just turn it into a kinematic object instead.
@@ -388,67 +396,69 @@ void pragma::physics::PxRigidDynamic::SetStatic(bool b)
 		SetCCDEnabled(false); // CCD is not supported for kinematic objects
 	GetInternalObject().setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC,b);
 }
-void pragma::physics::PxRigidDynamic::SetCCDEnabled(bool b)
+void pragma::physics::PhysXRigidDynamic::SetCCDEnabled(bool b)
 {
 	GetInternalObject().setRigidBodyFlag(physx::PxRigidBodyFlag::eENABLE_CCD,b);
 }
-void pragma::physics::PxRigidDynamic::ApplyCollisionShape(pragma::physics::IShape *optShape)
+void pragma::physics::PhysXRigidDynamic::ApplyCollisionShape(pragma::physics::IShape *optShape)
 {
-	PxRigidBody::ApplyCollisionShape(optShape);
+	PhysXRigidBody::ApplyCollisionShape(optShape);
+	if(optShape == nullptr)
+		return;
 	auto &o = GetInternalObject();
-	physx::PxRigidBodyExt::updateMassAndInertia(o,optShape->GetDensity(),nullptr,optShape->IsTrigger());
+	physx::PxRigidBodyExt::setMassAndUpdateInertia(o,optShape->GetMass(),nullptr,optShape->IsTrigger());
 }
 
 //////////////////
 
-pragma::physics::PxRigidStatic::PxRigidStatic(IEnvironment &env,PxUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia)
-	: PxRigidBody{env,std::move(actor),shape,mass,localInertia},ICollisionObject{env,shape},IRigidBody{env,mass,shape,localInertia}
+pragma::physics::PhysXRigidStatic::PhysXRigidStatic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia)
+	: PhysXRigidBody{env,std::move(actor),shape,mass,localInertia},ICollisionObject{env,shape},IRigidBody{env,mass,shape,localInertia}
 {}
-physx::PxRigidStatic &pragma::physics::PxRigidStatic::GetInternalObject() const {return static_cast<physx::PxRigidStatic&>(PxRigidBody::GetInternalObject());}
-void pragma::physics::PxRigidStatic::SetActivationState(ActivationState state) {}
-pragma::physics::PxRigidBody::ActivationState pragma::physics::PxRigidStatic::GetActivationState() const {return PxRigidBody::ActivationState::Asleep;}
-bool pragma::physics::PxRigidStatic::IsStatic() const {return true;}
-void pragma::physics::PxRigidStatic::SetStatic(bool b) {}
-void pragma::physics::PxRigidStatic::WakeUp(bool forceActivation) {}
-void pragma::physics::PxRigidStatic::PutToSleep() {}
-bool pragma::physics::PxRigidStatic::IsAsleep() const {return true;}
+physx::PxRigidStatic &pragma::physics::PhysXRigidStatic::GetInternalObject() const {return static_cast<physx::PxRigidStatic&>(PhysXRigidBody::GetInternalObject());}
+void pragma::physics::PhysXRigidStatic::SetActivationState(ActivationState state) {}
+pragma::physics::PhysXRigidBody::ActivationState pragma::physics::PhysXRigidStatic::GetActivationState() const {return PhysXRigidBody::ActivationState::Asleep;}
+bool pragma::physics::PhysXRigidStatic::IsStatic() const {return true;}
+void pragma::physics::PhysXRigidStatic::SetStatic(bool b) {}
+void pragma::physics::PhysXRigidStatic::WakeUp(bool forceActivation) {}
+void pragma::physics::PhysXRigidStatic::PutToSleep() {}
+bool pragma::physics::PhysXRigidStatic::IsAsleep() const {return true;}
 
-void pragma::physics::PxRigidStatic::SetCCDEnabled(bool b) {}
-void pragma::physics::PxRigidStatic::ApplyForce(const Vector3 &force) {}
-void pragma::physics::PxRigidStatic::ApplyForce(const Vector3 &force,const Vector3 &relPos) {}
-void pragma::physics::PxRigidStatic::ApplyImpulse(const Vector3 &impulse) {}
-void pragma::physics::PxRigidStatic::ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos) {}
-void pragma::physics::PxRigidStatic::ApplyTorque(const Vector3 &torque) {}
-void pragma::physics::PxRigidStatic::ApplyTorqueImpulse(const Vector3 &torque) {}
-void pragma::physics::PxRigidStatic::ClearForces() {}
-Vector3 pragma::physics::PxRigidStatic::GetTotalForce() const {return Vector3{};}
-Vector3 pragma::physics::PxRigidStatic::GetTotalTorque() const {return Vector3{};}
-float pragma::physics::PxRigidStatic::GetMass() const {return 0.f;}
-void pragma::physics::PxRigidStatic::SetMass(float mass) {}
-Vector3 pragma::physics::PxRigidStatic::GetLinearVelocity() const {return Vector3{};}
-Vector3 pragma::physics::PxRigidStatic::GetAngularVelocity() const {return Vector3{};}
-void pragma::physics::PxRigidStatic::SetLinearVelocity(const Vector3 &vel) {}
-void pragma::physics::PxRigidStatic::SetAngularVelocity(const Vector3 &vel) {}
-void pragma::physics::PxRigidStatic::SetLinearFactor(const Vector3 &factor) {}
-void pragma::physics::PxRigidStatic::SetAngularFactor(const Vector3 &factor) {}
-Vector3 pragma::physics::PxRigidStatic::GetLinearFactor() const {return Vector3{};}
-Vector3 pragma::physics::PxRigidStatic::GetAngularFactor() const {return Vector3{};}
-void pragma::physics::PxRigidStatic::SetLinearDamping(float damping) {}
-void pragma::physics::PxRigidStatic::SetAngularDamping(float damping) {}
-float pragma::physics::PxRigidStatic::GetLinearDamping() const {return 0.f;}
-float pragma::physics::PxRigidStatic::GetAngularDamping() const {return 0.f;}
-void pragma::physics::PxRigidStatic::SetLinearSleepingThreshold(float threshold) {}
-void pragma::physics::PxRigidStatic::SetAngularSleepingThreshold(float threshold) {}
-float pragma::physics::PxRigidStatic::GetLinearSleepingThreshold() const {return 0.f;}
-float pragma::physics::PxRigidStatic::GetAngularSleepingThreshold() const {return 0.f;}
+void pragma::physics::PhysXRigidStatic::SetCCDEnabled(bool b) {}
+void pragma::physics::PhysXRigidStatic::ApplyForce(const Vector3 &force) {}
+void pragma::physics::PhysXRigidStatic::ApplyForce(const Vector3 &force,const Vector3 &relPos) {}
+void pragma::physics::PhysXRigidStatic::ApplyImpulse(const Vector3 &impulse) {}
+void pragma::physics::PhysXRigidStatic::ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos) {}
+void pragma::physics::PhysXRigidStatic::ApplyTorque(const Vector3 &torque) {}
+void pragma::physics::PhysXRigidStatic::ApplyTorqueImpulse(const Vector3 &torque) {}
+void pragma::physics::PhysXRigidStatic::ClearForces() {}
+Vector3 pragma::physics::PhysXRigidStatic::GetTotalForce() const {return Vector3{};}
+Vector3 pragma::physics::PhysXRigidStatic::GetTotalTorque() const {return Vector3{};}
+float pragma::physics::PhysXRigidStatic::GetMass() const {return 0.f;}
+void pragma::physics::PhysXRigidStatic::SetMass(float mass) {}
+Vector3 pragma::physics::PhysXRigidStatic::GetLinearVelocity() const {return Vector3{};}
+Vector3 pragma::physics::PhysXRigidStatic::GetAngularVelocity() const {return Vector3{};}
+void pragma::physics::PhysXRigidStatic::SetLinearVelocity(const Vector3 &vel) {}
+void pragma::physics::PhysXRigidStatic::SetAngularVelocity(const Vector3 &vel) {}
+void pragma::physics::PhysXRigidStatic::SetLinearFactor(const Vector3 &factor) {}
+void pragma::physics::PhysXRigidStatic::SetAngularFactor(const Vector3 &factor) {}
+Vector3 pragma::physics::PhysXRigidStatic::GetLinearFactor() const {return Vector3{};}
+Vector3 pragma::physics::PhysXRigidStatic::GetAngularFactor() const {return Vector3{};}
+void pragma::physics::PhysXRigidStatic::SetLinearDamping(float damping) {}
+void pragma::physics::PhysXRigidStatic::SetAngularDamping(float damping) {}
+float pragma::physics::PhysXRigidStatic::GetLinearDamping() const {return 0.f;}
+float pragma::physics::PhysXRigidStatic::GetAngularDamping() const {return 0.f;}
+void pragma::physics::PhysXRigidStatic::SetLinearSleepingThreshold(float threshold) {}
+void pragma::physics::PhysXRigidStatic::SetAngularSleepingThreshold(float threshold) {}
+float pragma::physics::PhysXRigidStatic::GetLinearSleepingThreshold() const {return 0.f;}
+float pragma::physics::PhysXRigidStatic::GetAngularSleepingThreshold() const {return 0.f;}
 
-void pragma::physics::PxRigidStatic::SetKinematic(bool bKinematic) {}
-bool pragma::physics::PxRigidStatic::IsKinematic() const {return false;}
+void pragma::physics::PhysXRigidStatic::SetKinematic(bool bKinematic) {}
+bool pragma::physics::PhysXRigidStatic::IsKinematic() const {return false;}
 
 //////////////////
 
-pragma::physics::PxSoftBody::PxSoftBody(IEnvironment &env,PxUniquePtr<physx::PxActor> actor,IShape &shape)
-	: ISoftBody{env,shape,{}},PxCollisionObject{env,std::move(actor),shape}
+pragma::physics::PhysXSoftBody::PhysXSoftBody(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape)
+	: ISoftBody{env,shape,{}},PhysXCollisionObject{env,std::move(actor),shape}
 {}
-physx::PxActor &pragma::physics::PxSoftBody::GetInternalObject() const {return PxCollisionObject::GetInternalObject();}
+physx::PxActor &pragma::physics::PhysXSoftBody::GetInternalObject() const {return PhysXCollisionObject::GetInternalObject();}
 #pragma optimize("",on)

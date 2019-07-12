@@ -1,38 +1,53 @@
 #ifndef __PR_PX_VEHICLE_HPP__
 #define __PR_PX_VEHICLE_HPP__
 
-#include <pragma/physics/vehicle.hpp>
 #include "pr_physx/common.hpp"
+#include <pragma/physics/vehicle.hpp>
 
 namespace pragma::physics
 {
-	class PxEnvironment;
-	class PxVehicleDrive;
-	class PxVehicle
+	class ICollisionObject;
+	class PhysXEnvironment;
+	class PhysXQueryFilterCallback;
+	class PhysXVehicleDrive;
+	class PhysXVehicle
 		: public IVehicle
 	{
 	public:
-		static PxVehicle &GetVehicle(IVehicle &v);
-		static const PxVehicle &GetVehicle(const IVehicle &v);
+		friend PhysXEnvironment;
+		friend IEnvironment;
+		static PhysXVehicle &GetVehicle(IVehicle &v);
+		static const PhysXVehicle &GetVehicle(const IVehicle &v);
+		physx::PxVehicleDrive &GetInternalObject() const;
+		PhysXEnvironment &GetPxEnv() const;
+
+		uint32_t GetWheelCount() const;
+		float GetForwardSpeed() const;
+		float GetSidewaysSpeed() const;
 	private:
-		PxVehicle(IEnvironment &env,PxUniquePtr<physx::PxVehicleDrive> vhc);
+		PhysXVehicle(IEnvironment &env,PhysXUniquePtr<physx::PxVehicleDrive> vhc,const util::TSharedHandle<ICollisionObject> &collisionObject);
 		virtual void Initialize() override;
 		virtual void RemoveWorldObject() override;
 		virtual void DoAddWorldObject() override;
-		PxEnvironment &GetPxEnv() const;
-		PxUniquePtr<physx::PxVehicleDrive> m_vehicle = px_null_ptr<physx::PxVehicleDrive>();
+		void Simulate(float dt);
+		PhysXUniquePtr<physx::PxVehicleDrive> m_vehicle = px_null_ptr<physx::PxVehicleDrive>();
+		PhysXUniquePtr<physx::PxBatchQuery> m_raycastBatchQuery = px_null_ptr<physx::PxBatchQuery>();
+
+		std::vector<physx::PxRaycastQueryResult> m_raycastQueryResultPerWheel;
+		std::vector<physx::PxWheelQueryResult> m_wheelQueryResults;
+		std::vector<physx::PxRaycastHit> m_raycastHitPerWheel;
 	};
 
-	class PxWheel
+	class PhysXWheel
 		: public IWheel
 	{
 	public:
-		static PxWheel &GetWheel(IWheel &w);
-		static const PxWheel &GetWheel(const IWheel &w);
+		static PhysXWheel &GetWheel(IWheel &w);
+		static const PhysXWheel &GetWheel(const IWheel &w);
 	private:
-		PxWheel(IEnvironment &env);
+		PhysXWheel(IEnvironment &env);
 		virtual void Initialize() override;
-		PxEnvironment &GetPxEnv() const;
+		PhysXEnvironment &GetPxEnv() const;
 	};
 };
 

@@ -11,16 +11,16 @@ namespace physx
 };
 namespace pragma::physics
 {
-	class PxEnvironment;
-	class PxMaterial
+	class PhysXEnvironment;
+	class PhysXMaterial
 		: virtual public pragma::physics::IMaterial
 	{
 	public:
 		using Index = uint16_t;
-		friend PxEnvironment;
+		friend PhysXEnvironment;
 		friend IEnvironment;
-		static PxMaterial &GetMaterial(IMaterial &o);
-		static const PxMaterial &GetMaterial(const IMaterial &o);
+		static PhysXMaterial &GetMaterial(IMaterial &o);
+		static const PhysXMaterial &GetMaterial(const IMaterial &o);
 		const physx::PxMaterial &GetInternalObject() const;
 		physx::PxMaterial &GetInternalObject();
 
@@ -31,9 +31,9 @@ namespace pragma::physics
 		virtual float GetRestitution() const override;
 		virtual void SetRestitution(float restitution) override;
 	private:
-		PxMaterial(IEnvironment &env,PxUniquePtr<physx::PxMaterial> material);
+		PhysXMaterial(IEnvironment &env,PhysXUniquePtr<physx::PxMaterial> material);
 		virtual void Initialize() override;
-		PxUniquePtr<physx::PxMaterial> m_material = px_null_ptr<physx::PxMaterial>();
+		PhysXUniquePtr<physx::PxMaterial> m_material = px_null_ptr<physx::PxMaterial>();
 	};
 };
 

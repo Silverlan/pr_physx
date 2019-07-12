@@ -9,7 +9,7 @@ extern "C"
 {
 	PRAGMA_EXPORT void initialize_physics_engine(NetworkState &nw,std::unique_ptr<pragma::physics::IEnvironment> &outEnv)
 	{
-		auto env = std::make_unique<pragma::physics::PxEnvironment>(nw);
+		auto env = std::make_unique<pragma::physics::PhysXEnvironment>(nw);
 		if(env->Initialize() == false)
 			env = nullptr;
 		outEnv = std::move(env);

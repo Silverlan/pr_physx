@@ -7,14 +7,14 @@
 namespace pragma::physics
 {
 	template<class T>
-		using PxUniquePtr = std::unique_ptr<T,void(*)(T*)>;
+		using PhysXUniquePtr = std::unique_ptr<T,void(*)(T*)>;
 	template<class T>
-		static constexpr PxUniquePtr<T> px_null_ptr() {return PxUniquePtr<T>{nullptr,[](T*) {}};}
+		static constexpr PhysXUniquePtr<T> px_null_ptr() {return PhysXUniquePtr<T>{nullptr,[](T*) {}};}
 	template<class T>
-		static PxUniquePtr<T> px_create_unique_ptr(T *v) {
+		static PhysXUniquePtr<T> px_create_unique_ptr(T *v) {
 			if(v == nullptr)
 				return px_null_ptr<T>();
-			return PxUniquePtr<T>{v,[](T *v) {if(v) v->release();}};
+			return PhysXUniquePtr<T>{v,[](T *v) {if(v) v->release();}};
 		}
 };
 

@@ -20,6 +20,12 @@ namespace physx
 	class PxRigidActor;
 	class PxControllerDesc;
 	class PxDefaultCpuDispatcher;
+	class PxSimulationEventCallback;
+	class PxVehicleDrivableSurfaceToTireFrictionPairs;
+	class PxVehicleDrive;
+	class PxVehicleWheelData;
+	class PxVehicleTireData;
+	class PxJoint;
 };
 class NetworkState;
 enum class RayCastHitType : uint8_t;
@@ -27,32 +33,40 @@ namespace pragma::physics
 {
 	class CustomControllerBehaviorCallback;
 	class CustomUserControllerHitReport;
-	class PxRigidBody;
-	class PxCollisionObject;
-	class PxController;
-	class PxMaterial;
-	class PxShape;
-	class PxTriangleShape;
-	class PxConvexHullShape;
+	class PhysXRigidBody;
+	class PhysXCollisionObject;
+	class PhysXConstraint;
+	class PhysXController;
+	class PhysXMaterial;
+	class PhysXShape;
+	class PhysXVehicle;
+	class PhysXTriangleShape;
+	class PhysXConvexHullShape;
+	class PhysXSimulationFilterCallback;
 	struct WheelCreateInfo;
+	struct TireCreateInfo;
 	struct ChassisCreateInfo;
-	class PxEnvironment
+	class PhysXEnvironment
 		: public pragma::physics::IEnvironment
 	{
 	public:
-		PxEnvironment(NetworkState &state);
-		~PxEnvironment();
+		PhysXEnvironment(NetworkState &state);
+		virtual ~PhysXEnvironment() override;
 		static Transform CreateTransform(const physx::PxTransform &pxTransform);
 		static physx::PxTransform CreatePxTransform(const Transform &btTransform);
-		static PxCollisionObject *GetCollisionObject(const physx::PxRigidActor &actor);
-		static PxShape *GetShape(const physx::PxShape &shape);
-		static PxController *GetController(const physx::PxController &controller);
-		static PxMaterial *GetMaterial(const physx::PxMaterial &material);
+		static PhysXCollisionObject *GetCollisionObject(const physx::PxRigidActor &actor);
+		static PhysXConstraint *GetConstraint(const physx::PxJoint &constraint);
+		static PhysXShape *GetShape(const physx::PxShape &shape);
+		static PhysXController *GetController(const physx::PxController &controller);
+		static PhysXMaterial *GetMaterial(const physx::PxMaterial &material);
 		static physx::PxFoundation &GetFoundation();
 		static physx::PxPhysics &GetPhysics();
 		static physx::PxPvd &GetPVD();
 
 		virtual bool Initialize() override;
+
+		virtual void StartProfiling() override;
+		virtual void EndProfiling() override;
 
 		physx::PxVec3 ToPhysXVector(const Vector3 &v) const;
 		physx::PxExtendedVec3 ToPhysXExtendedVector(const Vector3 &v) const;
@@ -66,9 +80,10 @@ namespace pragma::physics
 		Quat FromPhysXRotation(const physx::PxQuat &v) const;
 		double ToPhysXLength(double len) const;
 		double FromPhysXLength(double len) const;
+		float FromPhysXMass(float mass) const;
 		static const Color &FromPhysXColor(uint32_t color);
 
-		PxRigidBody &ToBtType(IRigidBody &body);
+		PhysXRigidBody &ToBtType(IRigidBody &body);
 
 		virtual util::TSharedHandle<IFixedConstraint> CreateFixedConstraint(IRigidBody &a,const Vector3 &pivotA,const Quat &rotA,IRigidBody &b,const Vector3 &pivotB,const Quat &rotB) override;
 		virtual util::TSharedHandle<IBallSocketConstraint> CreateBallSocketConstraint(IRigidBody &a,const Vector3 &pivotA,IRigidBody &b,const Vector3 &pivotB) override;
@@ -95,7 +110,9 @@ namespace pragma::physics
 		virtual std::shared_ptr<IShape> CreateHeightfieldTerrainShape(uint32_t width,uint32_t length,Scalar maxHeight,uint32_t upAxis,const IMaterial &mat) override;
 		virtual std::shared_ptr<IMaterial> CreateMaterial(float staticFriction,float dynamicFriction,float restitution) override;
 
-		void CreateVehicle();
+		virtual util::TSharedHandle<IVehicle> CreateVehicle() override;
+
+		physx::PxVehicleDrivableSurfaceToTireFrictionPairs &GetVehicleSurfaceTireFrictionPairs() const;
 		physx::PxScene &GetScene() const;
 
 		virtual RemainingDeltaTime StepSimulation(float timeStep,int maxSubSteps=1,float fixedTimeStep=(1.f /60.f)) override;
@@ -107,31 +124,36 @@ namespace pragma::physics
 		physx::PxCooking &GetCooking();
 
 		template<class T,typename... TARGS>
-			PxUniquePtr<T> CreateUniquePtr(TARGS&& ...args);
+			PhysXUniquePtr<T> CreateUniquePtr(TARGS&& ...args);
 	private:
-		friend PxTriangleShape;
-		friend PxConvexHullShape;
-		util::TSharedHandle<IController> CreateController(PxUniquePtr<physx::PxController> controller);
-		void CreateWheel(const WheelCreateInfo &createInfo);
-		void InitializeShape(PxShape &shape,bool basicOnly=false);
-		void InitializeCollisionObject(PxCollisionObject &o);
+		friend PhysXTriangleShape;
+		friend PhysXConvexHullShape;
+		util::TSharedHandle<IController> CreateController(PhysXUniquePtr<physx::PxController> controller);
+		void InitializeShape(PhysXShape &shape,bool basicOnly=false);
+		void InitializeCollisionObject(PhysXCollisionObject &o);
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxRaycastHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxOverlapHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxSweepHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
-		void InitializeControllerDesc(physx::PxControllerDesc &inOutDesc,float stepHeight,const Transform &startTransform);
+		void InitializeControllerDesc(physx::PxControllerDesc &inOutDesc,float halfHeight,float stepHeight,const Transform &startTransform);
 
-		PxUniquePtr<physx::PxCooking> m_cooking = px_null_ptr<physx::PxCooking>();
-		PxUniquePtr<physx::PxScene> m_scene = px_null_ptr<physx::PxScene>();
-		PxUniquePtr<physx::PxControllerManager> m_controllerManager = px_null_ptr<physx::PxControllerManager>();
-		PxUniquePtr<physx::PxDefaultCpuDispatcher> m_cpuDispatcher = px_null_ptr<physx::PxDefaultCpuDispatcher>();
+		physx::PxVehicleWheelData ToPxWheelData(const WheelCreateInfo &createInfo);
+		physx::PxVehicleTireData ToPxTireData(const TireCreateInfo &createInfo);
+
+		PhysXUniquePtr<physx::PxCooking> m_cooking = px_null_ptr<physx::PxCooking>();
+		PhysXUniquePtr<physx::PxScene> m_scene = px_null_ptr<physx::PxScene>();
+		PhysXUniquePtr<physx::PxControllerManager> m_controllerManager = px_null_ptr<physx::PxControllerManager>();
+		PhysXUniquePtr<physx::PxDefaultCpuDispatcher> m_cpuDispatcher = px_null_ptr<physx::PxDefaultCpuDispatcher>();
+		PhysXUniquePtr<physx::PxVehicleDrivableSurfaceToTireFrictionPairs> m_surfaceTirePairs = px_null_ptr<physx::PxVehicleDrivableSurfaceToTireFrictionPairs>();
 
 		std::unique_ptr<CustomControllerBehaviorCallback> m_controllerBehaviorCallback = nullptr;
 		std::unique_ptr<CustomUserControllerHitReport> m_controllerHitReport = nullptr;
+		std::unique_ptr<physx::PxSimulationEventCallback> m_simEventCallback = nullptr;
+		std::unique_ptr<PhysXSimulationFilterCallback> m_simFilterCallback = nullptr;
 	};
 };
 
 template<class T,typename... TARGS>
-	pragma::physics::PxUniquePtr<T> pragma::physics::PxEnvironment::CreateUniquePtr(TARGS&& ...args)
+	pragma::physics::PhysXUniquePtr<T> pragma::physics::PhysXEnvironment::CreateUniquePtr(TARGS&& ...args)
 {
 	return std::unique_ptr<T,void(*)(T *t)>{new T{std::forward<TARGS>(args)...},[](T *t) {
 		t->OnRemove();

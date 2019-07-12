@@ -13,15 +13,15 @@ namespace physx
 namespace pragma::physics
 {
 	class IEnvironment;
-	class PxEnvironment;
-	class PxShape
+	class PhysXEnvironment;
+	class PhysXShape
 		: virtual public pragma::physics::IShape
 	{
 	public:
-		friend PxEnvironment;
+		friend PhysXEnvironment;
 		friend IEnvironment;
-		static PxShape &GetShape(IShape &s);
-		static const PxShape &GetShape(const IShape &s);
+		static PhysXShape &GetShape(IShape &s);
+		static const PhysXShape &GetShape(const IShape &s);
 
 		const physx::PxShape &GetInternalObject() const;
 		physx::PxShape &GetInternalObject();
@@ -29,6 +29,11 @@ namespace pragma::physics
 		virtual void CalculateLocalInertia(float mass,Vector3 *localInertia) const override;
 		virtual void GetAABB(Vector3 &min,Vector3 &max) const override;
 		virtual void GetBoundingSphere(Vector3 &outCenter,float &outRadius) const override;
+
+		virtual void ApplySurfaceMaterial(IMaterial &mat) override;
+		virtual float GetMass() const override;
+		virtual void SetMass(float mass) override;
+		virtual Vector3 GetCenterOfMass() const override;
 
 		virtual void SetTrigger(bool bTrigger) override;
 		virtual bool IsTrigger() const override;
@@ -38,29 +43,32 @@ namespace pragma::physics
 
 		virtual bool IsValid() const override;
 
-		PxEnvironment &GetPxEnv() const;
+		PhysXEnvironment &GetPxEnv() const;
 	protected:
-		PxShape(IEnvironment &env,PxUniquePtr<physx::PxShape> shape,PxUniquePtr<physx::PxGeometry> geometry);
-		PxUniquePtr<physx::PxGeometry> m_geometry = px_null_ptr<physx::PxGeometry>();
-		PxUniquePtr<physx::PxShape> m_shape = px_null_ptr<physx::PxShape>();
+		PhysXShape(IEnvironment &env,PhysXUniquePtr<physx::PxShape> shape,PhysXUniquePtr<physx::PxGeometry> geometry);
+		void UpdateShapeProperties();
+		PhysXUniquePtr<physx::PxGeometry> m_geometry = px_null_ptr<physx::PxGeometry>();
+		PhysXUniquePtr<physx::PxShape> m_shape = px_null_ptr<physx::PxShape>();
+		float m_mass = 0.f;
+		Vector3 m_centerOfMass = {};
 	};
 
-	class PxConvexShape
+	class PhysXConvexShape
 		: virtual public pragma::physics::IConvexShape,
-		public PxShape
+		public PhysXShape
 	{
 	public:
-		friend PxEnvironment;
+		friend PhysXEnvironment;
 		friend IEnvironment;
 
 		virtual void SetLocalScaling(const Vector3 &scale) override;
 	protected:
-		PxConvexShape(IEnvironment &env,PxUniquePtr<physx::PxShape> shape,PxUniquePtr<physx::PxGeometry> geometry);
+		PhysXConvexShape(IEnvironment &env,PhysXUniquePtr<physx::PxShape> shape,PhysXUniquePtr<physx::PxGeometry> geometry);
 	};
 
-	class PxConvexHullShape
+	class PhysXConvexHullShape
 		: virtual public pragma::physics::IConvexHullShape,
-		public PxConvexShape
+		public PhysXConvexShape
 	{
 	public:
 		friend IEnvironment;
@@ -70,63 +78,63 @@ namespace pragma::physics
 		virtual void AddTriangle(uint32_t idx0,uint32_t idx1,uint32_t idx2) override;
 		virtual void ReservePoints(uint32_t numPoints) override;
 		virtual void ReserveTriangles(uint32_t numTris) override;
-		virtual void Build() override;
+		virtual void DoBuild() override;
 	private:
-		PxConvexHullShape(IEnvironment &env);
+		PhysXConvexHullShape(IEnvironment &env);
 		std::vector<Vector3> m_vertices = {};
 		std::vector<uint16_t> m_triangles = {};
 	};
 
-	class PxCapsuleShape
+	class PhysXCapsuleShape
 		: virtual public pragma::physics::ICapsuleShape,
-		public PxConvexShape
+		public PhysXConvexShape
 	{
 	public:
-		friend PxEnvironment;
+		friend PhysXEnvironment;
 		friend IEnvironment;
 
 		virtual float GetRadius() const override;
 		virtual float GetHalfHeight() const override;
 	protected:
-		PxCapsuleShape(IEnvironment &env,PxUniquePtr<physx::PxShape> shape,PxUniquePtr<physx::PxGeometry> geometry);
+		PhysXCapsuleShape(IEnvironment &env,PhysXUniquePtr<physx::PxShape> shape,PhysXUniquePtr<physx::PxGeometry> geometry);
 	};
 
-	class PxBoxShape
+	class PhysXBoxShape
 		: virtual public pragma::physics::IBoxShape,
-		public PxConvexShape
+		public PhysXConvexShape
 	{
 	public:
-		friend PxEnvironment;
+		friend PhysXEnvironment;
 		friend IEnvironment;
 		virtual Vector3 GetHalfExtents() const override;
 	protected:
-		PxBoxShape(IEnvironment &env,PxUniquePtr<physx::PxShape> shape,PxUniquePtr<physx::PxGeometry> geometry);
+		PhysXBoxShape(IEnvironment &env,PhysXUniquePtr<physx::PxShape> shape,PhysXUniquePtr<physx::PxGeometry> geometry);
 	};
 
-	class PxCompoundShape
+	class PhysXCompoundShape
 		: virtual public pragma::physics::ICompoundShape,
-		public PxShape
+		public PhysXShape
 	{
 	public:
 		friend IEnvironment;
 		virtual void AddShape(pragma::physics::IShape &shape) override;
 	protected:
-		PxCompoundShape(IEnvironment &env);
+		PhysXCompoundShape(IEnvironment &env);
 	};
 
 	class IMaterial;
-	class PxTriangleShape
+	class PhysXTriangleShape
 		: virtual public ITriangleShape,
-		public PxShape
+		public PhysXShape
 	{
 	public:
-		friend PxEnvironment;
+		friend PhysXEnvironment;
 		friend IEnvironment;
 		virtual void CalculateLocalInertia(float mass,Vector3 *localInertia) const override;
 		//virtual void AddTriangle(const Vector3 &a,const Vector3 &b,const Vector3 &c,const SurfaceMaterial *mat=nullptr);
-		virtual void Build(const std::vector<SurfaceMaterial> *materials=nullptr) override;
+		virtual void DoBuild(const std::vector<SurfaceMaterial> *materials=nullptr) override;
 	protected:
-		PxTriangleShape(IEnvironment &env);
+		PhysXTriangleShape(IEnvironment &env);
 	};
 };
 

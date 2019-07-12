@@ -11,29 +11,31 @@ namespace physx
 };
 namespace pragma::physics
 {
-	class PxController;
-	class PxEnvironment;
-	class PxCollisionObject
+	class PhysXController;
+	class PhysXEnvironment;
+	class PhysXCollisionObject
 		: virtual public pragma::physics::ICollisionObject
 	{
 	public:
 		friend IEnvironment;
-		static PxCollisionObject &GetCollisionObject(ICollisionObject &o);
-		static const PxCollisionObject &GetCollisionObject(const ICollisionObject &o);
-		PxCollisionObject(IEnvironment &env,PxUniquePtr<physx::PxActor> actor,IShape &shape);
+		static PhysXCollisionObject &GetCollisionObject(ICollisionObject &o);
+		static const PhysXCollisionObject &GetCollisionObject(const ICollisionObject &o);
+		PhysXCollisionObject(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape);
+		PhysXEnvironment &GetPxEnv() const;
 		physx::PxActor &GetInternalObject() const;
 		virtual void GetAABB(Vector3 &min,Vector3 &max) const override;
+		virtual void SetSleepReportEnabled(bool reportEnabled) override;
+		virtual bool IsSleepReportEnabled() const override;
 	protected:
-		PxEnvironment &GetPxEnv() const;
 		virtual void Initialize() override;
 		virtual void RemoveWorldObject() override;
 		virtual void DoAddWorldObject() override;
 	private:
-		PxUniquePtr<physx::PxActor> m_actor = px_null_ptr<physx::PxActor>();
+		PhysXUniquePtr<physx::PxActor> m_actor = px_null_ptr<physx::PxActor>();
 	};
-	class PxRigidBody
+	class PhysXRigidBody
 		: virtual public pragma::physics::IRigidBody,
-		public PxCollisionObject
+		public PhysXCollisionObject
 	{
 	public:
 		friend IEnvironment;
@@ -61,10 +63,10 @@ namespace pragma::physics
 		virtual Mat3 GetInvInertiaTensorWorld() const override;
 		virtual void SetInertia(const Vector3 &inertia) override;
 
-		void SetController(PxController &controller);
-		PxController *GetController() const;
+		void SetController(PhysXController &controller);
+		PhysXController *GetController() const;
 	protected:
-		PxRigidBody(IEnvironment &env,PxUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia);
+		PhysXRigidBody(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia);
 		virtual void ApplyCollisionShape(pragma::physics::IShape *optShape) override;
 		virtual void RemoveWorldObject() override;
 		virtual void DoAddWorldObject() override;
@@ -75,10 +77,10 @@ namespace pragma::physics
 		//
 
 		// The controller this body belongs to
-		mutable util::TWeakSharedHandle<PxController> m_controller = {};
+		mutable util::TWeakSharedHandle<PhysXController> m_controller = {};
 	};
-	class PxRigidDynamic
-		: public PxRigidBody
+	class PhysXRigidDynamic
+		: public PhysXRigidBody
 	{
 	public:
 		friend IEnvironment;
@@ -123,12 +125,12 @@ namespace pragma::physics
 		virtual void SetKinematic(bool bKinematic) override;
 		virtual bool IsKinematic() const override;
 	protected:
-		PxRigidDynamic(IEnvironment &env,PxUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia);
+		PhysXRigidDynamic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia);
 	private:
 		virtual void ApplyCollisionShape(pragma::physics::IShape *optShape) override;
 	};
-	class PxRigidStatic
-		: public PxRigidBody
+	class PhysXRigidStatic
+		: public PhysXRigidBody
 	{
 	public:
 		friend IEnvironment;
@@ -173,15 +175,15 @@ namespace pragma::physics
 		virtual void SetKinematic(bool bKinematic) override;
 		virtual bool IsKinematic() const override;
 	protected:
-		PxRigidStatic(IEnvironment &env,PxUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia);
+		PhysXRigidStatic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia);
 	};
-	class PxSoftBody
+	class PhysXSoftBody
 		: virtual public pragma::physics::ISoftBody,
-		public PxCollisionObject
+		public PhysXCollisionObject
 	{
 	public:
 		friend IEnvironment;
-		PxSoftBody(IEnvironment &env,PxUniquePtr<physx::PxActor> actor,IShape &shape);
+		PhysXSoftBody(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape);
 		physx::PxActor &GetInternalObject() const;
 	};
 };

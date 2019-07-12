@@ -15,14 +15,14 @@ namespace physx
 };
 namespace pragma::physics
 {
-	class PxEnvironment;
-	class PxConstraint
+	class PhysXEnvironment;
+	class PhysXConstraint
 		: virtual public IConstraint
 	{
 	public:
 		friend IEnvironment;
-		static PxConstraint &GetConstraint(IConstraint &c);
-		static const PxConstraint &GetConstraint(const IConstraint &c);
+		static PhysXConstraint &GetConstraint(IConstraint &c);
+		static const PhysXConstraint &GetConstraint(const IConstraint &c);
 		physx::PxJoint &GetInternalObject() const;
 
 		virtual void SetEnabled(bool b) override;
@@ -37,69 +37,69 @@ namespace pragma::physics
 		virtual float GetBreakingImpulseThreshold() const override;
 		virtual void SetBreakingImpulseThreshold(float threshold) override;
 	protected:
-		PxConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> joint);
+		PhysXConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> joint);
 		virtual void Initialize() override;
 		virtual void RemoveWorldObject() override;
 		virtual void DoAddWorldObject() override;
-		PxEnvironment &GetPxEnv() const;
+		PhysXEnvironment &GetPxEnv() const;
 		virtual void DoSetCollisionsEnabled(Bool b) override;
-		PxUniquePtr<physx::PxJoint> m_joint = px_null_ptr<physx::PxJoint>();
+		PhysXUniquePtr<physx::PxJoint> m_joint = px_null_ptr<physx::PxJoint>();
 	};
 
-	class PxFixedConstraint
+	class PhysXFixedConstraint
 		: public IFixedConstraint,
-		public PxConstraint
+		public PhysXConstraint
 	{
 	public:
 		friend IEnvironment;
 	protected:
-		PxFixedConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
+		PhysXFixedConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c);
 	};
 
-	class PxBallSocketConstraint
+	class PhysXBallSocketConstraint
 		: public IBallSocketConstraint,
-		public PxConstraint
+		public PhysXConstraint
 	{
 	public:
 		friend IEnvironment;
 	protected:
-		PxBallSocketConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
+		PhysXBallSocketConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c);
 	};
 
-	class PxHingeConstraint
+	class PhysXHingeConstraint
 		: public IHingeConstraint,
-		public PxConstraint
+		public PhysXConstraint
 	{
 	public:
 		friend IEnvironment;
 	protected:
-		PxHingeConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
+		PhysXHingeConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c);
 	};
 
-	class PxSliderConstraint
+	class PhysXSliderConstraint
 		: public ISliderConstraint,
-		public PxConstraint
+		public PhysXConstraint
 	{
 	public:
 		friend IEnvironment;
 	protected:
-		PxSliderConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
+		PhysXSliderConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c);
 	};
 
-	class PxConeTwistConstraint
+	class PhysXConeTwistConstraint
 		: public IConeTwistConstraint,
-		public PxConstraint
+		public PhysXConstraint
 	{
 	public:
 		friend IEnvironment;
 		virtual void SetLimit(float swingSpan1,float swingSpan2,float twistSpan,float softness=1.f,float biasFactor=0.3f,float relaxationFactor=1.f) override;
 	protected:
-		PxConeTwistConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
+		PhysXConeTwistConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c);
 	};
 
-	class PxDoFConstraint
+	class PhysXDoFConstraint
 		: public IDoFConstraint,
-		public PxConstraint
+		public PhysXConstraint
 	{
 	public:
 		friend IEnvironment;
@@ -165,12 +165,12 @@ namespace pragma::physics
 		virtual Vector3i GetCurrentLinearLimit() const override;
 		virtual Vector3 GetCurrentLinearAccumulatedImpulse() const override;
 	protected:
-		PxDoFConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
+		PhysXDoFConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c);
 	};
 
-	class PxDoFSpringConstraint
+	class PhysXDoFSpringConstraint
 		: public IDoFSpringConstraint,
-		public PxConstraint
+		public PhysXConstraint
 	{
 	public:
 		friend IEnvironment;
@@ -225,7 +225,7 @@ namespace pragma::physics
 		virtual void SetStopCFM(AxisType type,pragma::Axis axis,double value) override;
 		virtual double GetStopCFM(AxisType type,pragma::Axis axis) const override;
 	protected:
-		PxDoFSpringConstraint(IEnvironment &env,PxUniquePtr<physx::PxJoint> c);
+		PhysXDoFSpringConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c);
 	};
 };
 

@@ -4,7 +4,7 @@
 #include "pr_physx/shape.hpp"
 #include <pragma/physics/raytraces.h>
 
-pragma::physics::RayCastFilterCallback::RayCastFilterCallback(const pragma::physics::PxEnvironment &env,pragma::physics::IRayCastFilterCallback &rayCastFilterCallback)
+pragma::physics::RayCastFilterCallback::RayCastFilterCallback(const pragma::physics::PhysXEnvironment &env,pragma::physics::IRayCastFilterCallback &rayCastFilterCallback)
 	: m_env{env},m_rayCastFilterCallback{rayCastFilterCallback}
 {}
 physx::PxQueryHitType::Enum pragma::physics::RayCastFilterCallback::preFilter(

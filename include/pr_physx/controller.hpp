@@ -11,20 +11,22 @@ namespace physx
 };
 namespace pragma::physics
 {
-	class PxEnvironment;
+	class PhysXEnvironment;
+	class PhysXQueryFilterCallback;
 	class CustomUserControllerHitReport;
 	class IMaterial;
-	class PxController
+	class PhysXController
 		: virtual public IController
 	{
 	public:
 		friend IEnvironment;
-		friend PxEnvironment;
+		friend PhysXEnvironment;
 		friend CustomUserControllerHitReport;
-		static PxController &GetController(IController &c);
-		static const PxController &GetController(const IController &c);
+		static PhysXController &GetController(IController &c);
+		static const PhysXController &GetController(const IController &c);
+		virtual ~PhysXController() override;
 		physx::PxController &GetInternalObject() const;
-		PxEnvironment &GetPxEnv() const;
+		PhysXEnvironment &GetPxEnv() const;
 
 		virtual IShape *GetGroundShape() const override;
 		virtual IRigidBody *GetGroundBody() const override;
@@ -48,7 +50,7 @@ namespace pragma::physics
 		virtual void SetStepHeight(float stepHeight) override;
 		virtual float GetStepHeight() const override;
 	protected:
-		PxController(IEnvironment &env,PxUniquePtr<physx::PxController> controller,const util::TSharedHandle<ICollisionObject> &collisionObject);
+		PhysXController(IEnvironment &env,PhysXUniquePtr<physx::PxController> controller,const util::TSharedHandle<ICollisionObject> &collisionObject);
 		virtual void Initialize() override;
 		virtual void RemoveWorldObject() override;
 		virtual void DoAddWorldObject() override;
@@ -62,7 +64,8 @@ namespace pragma::physics
 		};
 		void PreSimulate();
 		void PostSimulate();
-		PxUniquePtr<physx::PxController> m_controller = px_null_ptr<physx::PxController>();
+		PhysXUniquePtr<physx::PxController> m_controller = px_null_ptr<physx::PxController>();
+		std::unique_ptr<PhysXQueryFilterCallback> m_queryFilterCallback = nullptr;
 		physx::PxControllerState m_controllerState;
 		std::vector<TouchingHit> m_touchingHits = {};
 		TouchingHit *m_pGroundTouchingHit = nullptr;

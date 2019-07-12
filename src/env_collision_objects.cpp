@@ -3,15 +3,15 @@
 #include "pr_physx/collision_object.hpp"
 #include <pragma/networkstate/networkstate.h>
 
-void pragma::physics::PxEnvironment::InitializeCollisionObject(PxCollisionObject &o)
+void pragma::physics::PhysXEnvironment::InitializeCollisionObject(PhysXCollisionObject &o)
 {
 	o.GetInternalObject().setActorFlag(physx::PxActorFlag::eVISUALIZATION,true);
 }
-util::TSharedHandle<pragma::physics::ICollisionObject> pragma::physics::PxEnvironment::CreateCollisionObject(IShape &shape)
+util::TSharedHandle<pragma::physics::ICollisionObject> pragma::physics::PhysXEnvironment::CreateCollisionObject(IShape &shape)
 {
 	return nullptr;
 }
-util::TSharedHandle<pragma::physics::IRigidBody> pragma::physics::PxEnvironment::CreateRigidBody(float mass,IShape &shape,const Vector3 &localInertia,bool dynamic)
+util::TSharedHandle<pragma::physics::IRigidBody> pragma::physics::PhysXEnvironment::CreateRigidBody(float mass,IShape &shape,const Vector3 &localInertia,bool dynamic)
 {
 	if(shape.IsValid() == false)
 		return nullptr;
@@ -19,36 +19,35 @@ util::TSharedHandle<pragma::physics::IRigidBody> pragma::physics::PxEnvironment:
 	auto rigidObj = px_create_unique_ptr<physx::PxActor>(
 		dynamic ? static_cast<physx::PxRigidActor*>(GetPhysics().createRigidDynamic(t)) :
 		static_cast<physx::PxRigidActor*>(GetPhysics().createRigidStatic(t))
-		);
+	);
 	if(rigidObj == nullptr)
 		return nullptr;
 	auto *pRigidObj = static_cast<physx::PxRigidActor*>(rigidObj.get());
-	auto rigidBody = dynamic ? util::shared_handle_cast<PxRigidDynamic,PxRigidBody>(CreateSharedHandle<PxRigidDynamic>(*this,std::move(rigidObj),shape,mass,localInertia)) :
-		util::shared_handle_cast<PxRigidStatic,PxRigidBody>(CreateSharedHandle<PxRigidStatic>(*this,std::move(rigidObj),shape,mass,localInertia));
+	auto rigidBody = dynamic ? util::shared_handle_cast<PhysXRigidDynamic,PhysXRigidBody>(CreateSharedHandle<PhysXRigidDynamic>(*this,std::move(rigidObj),shape,mass,localInertia)) :
+		util::shared_handle_cast<PhysXRigidStatic,PhysXRigidBody>(CreateSharedHandle<PhysXRigidStatic>(*this,std::move(rigidObj),shape,mass,localInertia));
 	if(dynamic && (shape.IsTriangleShape() || shape.IsHeightfield())) // Dynamic rigid bodies with triangle or height field shape HAVE to be kinematic
 		static_cast<physx::PxRigidDynamic*>(pRigidObj)->setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC,true);
-	if(pRigidObj->attachShape(const_cast<PxShape&>(dynamic_cast<const PxShape&>(shape)).GetInternalObject()) == false)
+	if(pRigidObj->attachShape(const_cast<PhysXShape&>(dynamic_cast<const PhysXShape&>(shape)).GetInternalObject()) == false)
 		return nullptr;
 
 	physx::PxFilterData filterData;
 	filterData.word0 = 1; // Group // word0 = own ID
 	filterData.word1 = 0; // Mask  // word1 = ID mask to filter pairs that trigger a
 	filterData.word2 = 0;
-	filterData.word3 = 0;
-	PxShape::GetShape(shape).GetInternalObject().setSimulationFilterData(filterData);
+	filterData.word3 = 64; // TODO: Drivable surface
+	PhysXShape::GetShape(shape).GetInternalObject().setSimulationFilterData(filterData);
 
-	auto density = 1.f; // TODO
 	if(dynamic)
-		physx::PxRigidBodyExt::updateMassAndInertia(*static_cast<physx::PxRigidDynamic*>(pRigidObj),density);
+		physx::PxRigidBodyExt::setMassAndUpdateInertia(*static_cast<physx::PxRigidDynamic*>(pRigidObj),mass);
 	InitializeCollisionObject(*rigidBody);
 	AddCollisionObject(*rigidBody);
-	return util::shared_handle_cast<PxRigidBody,IRigidBody>(rigidBody);
+	return util::shared_handle_cast<PhysXRigidBody,IRigidBody>(rigidBody);
 }
-util::TSharedHandle<pragma::physics::ISoftBody> pragma::physics::PxEnvironment::CreateSoftBody(const PhysSoftBodyInfo &info,float mass,const std::vector<Vector3> &verts,const std::vector<uint16_t> &indices,std::vector<uint16_t> &indexTranslations)
+util::TSharedHandle<pragma::physics::ISoftBody> pragma::physics::PhysXEnvironment::CreateSoftBody(const PhysSoftBodyInfo &info,float mass,const std::vector<Vector3> &verts,const std::vector<uint16_t> &indices,std::vector<uint16_t> &indexTranslations)
 {
 	return nullptr;
 }
-util::TSharedHandle<pragma::physics::IGhostObject> pragma::physics::PxEnvironment::CreateGhostObject(IShape &shape)
+util::TSharedHandle<pragma::physics::IGhostObject> pragma::physics::PhysXEnvironment::CreateGhostObject(IShape &shape)
 {
 	return nullptr;
 }

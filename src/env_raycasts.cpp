@@ -6,7 +6,7 @@
 #include <pragma/physics/raytraces.h>
 
 #pragma optimize("",off)
-void pragma::physics::PxEnvironment::InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxRaycastHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const
+void pragma::physics::PhysXEnvironment::InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxRaycastHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const
 {
 	auto *colObj = raycastHit.actor ? GetCollisionObject(*raycastHit.actor) : nullptr;
 	if(colObj)
@@ -32,7 +32,7 @@ void pragma::physics::PxEnvironment::InitializeRayCastResult(const TraceData &da
 	outResult.position = FromPhysXVector(raycastHit.position);
 	outResult.startPosition = data.GetSourceOrigin();
 }
-void pragma::physics::PxEnvironment::InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxOverlapHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const
+void pragma::physics::PhysXEnvironment::InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxOverlapHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const
 {
 	auto *colObj = raycastHit.actor ? GetCollisionObject(*raycastHit.actor) : nullptr;
 	if(colObj)
@@ -54,7 +54,7 @@ void pragma::physics::PxEnvironment::InitializeRayCastResult(const TraceData &da
 	outResult.hitType = hitType;
 	outResult.startPosition = data.GetSourceOrigin();
 }
-void pragma::physics::PxEnvironment::InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxSweepHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const
+void pragma::physics::PhysXEnvironment::InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxSweepHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const
 {
 	auto *colObj = raycastHit.actor ? GetCollisionObject(*raycastHit.actor) : nullptr;
 	if(colObj)
@@ -81,7 +81,7 @@ void pragma::physics::PxEnvironment::InitializeRayCastResult(const TraceData &da
 	outResult.startPosition = data.GetSourceOrigin();
 }
 
-static std::unique_ptr<pragma::physics::RayCastFilterCallback> get_raycast_filter(const pragma::physics::PxEnvironment &env,const TraceData &data,physx::PxHitFlags &hitFlags,physx::PxQueryFilterData &queryFilterData)
+static std::unique_ptr<pragma::physics::RayCastFilterCallback> get_raycast_filter(const pragma::physics::PhysXEnvironment &env,const TraceData &data,physx::PxHitFlags &hitFlags,physx::PxQueryFilterData &queryFilterData)
 {
 	auto flags = data.GetFlags();
 	physx::PxQueryFlags queryFlags = physx::PxQueryFlag::eDYNAMIC | physx::PxQueryFlag::eSTATIC;
@@ -122,12 +122,12 @@ static std::unique_ptr<pragma::physics::RayCastFilterCallback> get_raycast_filte
 	queryFilterData = physx::PxQueryFilterData{queryFlags};
 	return pxFilter;
 }
-Bool pragma::physics::PxEnvironment::Overlap(const TraceData &data,std::vector<TraceResult> *optOutResults) const
+Bool pragma::physics::PhysXEnvironment::Overlap(const TraceData &data,std::vector<TraceResult> *optOutResults) const
 {
 	auto *shape = data.GetShape();
 	if(shape == nullptr || shape->IsConvex() == false)
 		return false;
-	auto &convexShape = static_cast<const PxConvexShape&>(PxShape::GetShape(*shape));
+	auto &convexShape = static_cast<const PhysXConvexShape&>(PhysXShape::GetShape(*shape));
 	if(convexShape.m_geometry == nullptr)
 		return false;
 	physx::PxTransform pose {
@@ -147,6 +147,9 @@ Bool pragma::physics::PxEnvironment::Overlap(const TraceData &data,std::vector<T
 	auto pxFilter = get_raycast_filter(*this,data,hitFlags,queryFilterData);
 
 	physx::PxOverlapBuffer hit {};
+	std::array<physx::PxOverlapHit,32> touchingHits; // Arbitrary maximum number of touches
+	hit.touches = touchingHits.data();
+	hit.maxNbTouches = touchingHits.size();
 	auto bHitAny = m_scene->overlap(*convexShape.m_geometry,pose,hit,queryFilterData,pxFilter.get());
 	if(optOutResults == nullptr || bHitAny == false)
 		return bHitAny;
@@ -157,22 +160,22 @@ Bool pragma::physics::PxEnvironment::Overlap(const TraceData &data,std::vector<T
 		auto &touchHit = hit.getTouch(i);
 		optOutResults->push_back({});
 		auto &result = optOutResults->back();
-		InitializeRayCastResult(data,distance,hit.block,result,RayCastHitType::Touch);
+		InitializeRayCastResult(data,distance,touchHit,result,RayCastHitType::Touch);
 	}
 	optOutResults->push_back({});
 	auto &result = optOutResults->back();
-	InitializeRayCastResult(data,distance,hit.block,result,bHitAny ? RayCastHitType::Block : RayCastHitType::None);
+	InitializeRayCastResult(data,distance,hit.block,result,hit.hasBlock ? RayCastHitType::Block : RayCastHitType::None);
 	return bHitAny;
 }
 
-Bool pragma::physics::PxEnvironment::RayCast(const TraceData &data,std::vector<TraceResult> *optOutResults) const
+Bool pragma::physics::PhysXEnvironment::RayCast(const TraceData &data,std::vector<TraceResult> *optOutResults) const
 {
 	auto origin = ToPhysXVector(data.GetSourceOrigin());
-	auto target = data.GetTargetOrigin();
-	auto distance = uvec::length(target);
+	auto target = ToPhysXVector(data.GetTargetOrigin());
+	auto unitDir = target -origin;
+	auto distance = unitDir.magnitude();
 	if(distance == 0.f)
 		return false;
-	auto unitDir = ToPhysXVector(target);
 	unitDir /= distance;
 
 	auto hitFlags = static_cast<physx::PxHitFlags>(0);
@@ -180,6 +183,9 @@ Bool pragma::physics::PxEnvironment::RayCast(const TraceData &data,std::vector<T
 	auto pxFilter = get_raycast_filter(*this,data,hitFlags,queryFilterData);
 
 	physx::PxRaycastBuffer hit {};
+	std::array<physx::PxRaycastHit,32> touchingHits; // Arbitrary maximum number of touches
+	hit.touches = touchingHits.data();
+	hit.maxNbTouches = touchingHits.size();
 	auto bHitAny = m_scene->raycast(origin,unitDir,distance,hit,hitFlags,queryFilterData,pxFilter.get());
 	if(optOutResults == nullptr || bHitAny == false)
 		return bHitAny;
@@ -190,19 +196,19 @@ Bool pragma::physics::PxEnvironment::RayCast(const TraceData &data,std::vector<T
 		auto &touchHit = hit.getTouch(i);
 		optOutResults->push_back({});
 		auto &result = optOutResults->back();
-		InitializeRayCastResult(data,distance,hit.block,result,RayCastHitType::Touch);
+		InitializeRayCastResult(data,distance,touchHit,result,RayCastHitType::Touch);
 	}
 	optOutResults->push_back({});
 	auto &result = optOutResults->back();
-	InitializeRayCastResult(data,distance,hit.block,result,bHitAny ? RayCastHitType::Block : RayCastHitType::None);
+	InitializeRayCastResult(data,distance,hit.block,result,hit.hasBlock ? RayCastHitType::Block : RayCastHitType::None);
 	return bHitAny;
 }
-Bool pragma::physics::PxEnvironment::Sweep(const TraceData &data,std::vector<TraceResult> *optOutResults) const
+Bool pragma::physics::PhysXEnvironment::Sweep(const TraceData &data,std::vector<TraceResult> *optOutResults) const
 {
 	auto *shape = data.GetShape();
 	if(shape == nullptr || shape->IsConvex() == false)
 		return false;
-	auto &convexShape = static_cast<const PxConvexShape&>(PxShape::GetShape(*shape));
+	auto &convexShape = static_cast<const PhysXConvexShape&>(PhysXShape::GetShape(*shape));
 	if(convexShape.m_geometry == nullptr)
 		return false;
 	physx::PxTransform pose {
@@ -221,6 +227,9 @@ Bool pragma::physics::PxEnvironment::Sweep(const TraceData &data,std::vector<Tra
 	auto pxFilter = get_raycast_filter(*this,data,hitFlags,queryFilterData);
 
 	physx::PxSweepBuffer hit {};
+	std::array<physx::PxSweepHit,32> touchingHits; // Arbitrary maximum number of touches
+	hit.touches = touchingHits.data();
+	hit.maxNbTouches = touchingHits.size();
 	auto bHitAny = m_scene->sweep(*convexShape.m_geometry,pose,unitDir,distance,hit,hitFlags,queryFilterData,pxFilter.get());
 	if(optOutResults == nullptr || bHitAny == false)
 		return bHitAny;
@@ -231,12 +240,12 @@ Bool pragma::physics::PxEnvironment::Sweep(const TraceData &data,std::vector<Tra
 		auto &touchHit = hit.getTouch(i);
 		optOutResults->push_back({});
 		auto &result = optOutResults->back();
-		InitializeRayCastResult(data,distance,hit.block,result,RayCastHitType::Touch);
+		InitializeRayCastResult(data,distance,touchHit,result,RayCastHitType::Touch);
 	}
 	optOutResults->push_back({});
 	auto &result = optOutResults->back();
-	InitializeRayCastResult(data,distance,hit.block,result,bHitAny ? RayCastHitType::Block : RayCastHitType::None);
+	InitializeRayCastResult(data,distance,hit.block,result,hit.hasBlock ? RayCastHitType::Block : RayCastHitType::None);
 	return bHitAny;
 }
-physx::PxCooking &pragma::physics::PxEnvironment::GetCooking() {return *m_cooking;}
+physx::PxCooking &pragma::physics::PhysXEnvironment::GetCooking() {return *m_cooking;}
 #pragma optimize("",on)
