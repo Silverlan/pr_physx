@@ -144,6 +144,25 @@ extern "C"
 	}
 };
 
+physx::PxFilterFlags VehicleFilterShader
+(physx::PxFilterObjectAttributes attributes0, physx::PxFilterData filterData0, 
+	physx::PxFilterObjectAttributes attributes1, physx::PxFilterData filterData1,
+	physx::PxPairFlags& pairFlags, const void* constantBlock, physx::PxU32 constantBlockSize)
+{
+	PX_UNUSED(attributes0);
+	PX_UNUSED(attributes1);
+	PX_UNUSED(constantBlock);
+	PX_UNUSED(constantBlockSize);
+
+	if( (0 == (filterData0.word0 & filterData1.word1)) && (0 == (filterData1.word0 & filterData0.word1)) )
+		return physx::PxFilterFlag::eSUPPRESS;
+
+	pairFlags = physx::PxPairFlag::eCONTACT_DEFAULT;
+	pairFlags |= physx::PxPairFlags(physx::PxU16(filterData0.word2 | filterData1.word2));
+
+	return physx::PxFilterFlags();
+}
+
 bool pragma::physics::PhysXEnvironment::Initialize()
 {
 	if(g_pxFoundation == nullptr)
@@ -173,7 +192,7 @@ bool pragma::physics::PhysXEnvironment::Initialize()
 
 	physx::PxTolerancesScale scale;
 	scale.length = util::metres_to_units(1);
-	scale.speed = 600.f;
+	scale.speed = 10.0f * 40.f;//600.f;
 	if(g_pxPhysics == nullptr)
 	{
 		g_pxPhysics = px_create_unique_ptr(PxCreatePhysics(PX_PHYSICS_VERSION,*g_pxFoundation,scale,bEnableDebugging,g_pxPvd.get()));
@@ -187,10 +206,11 @@ bool pragma::physics::PhysXEnvironment::Initialize()
 	m_simEventCallback = std::make_unique<PhysXSimulationEventCallback>();
 	m_simFilterCallback = std::make_unique<PhysXSimulationFilterCallback>();
 	physx::PxSceneDesc sceneDesc {scale};
-	sceneDesc.gravity = {0.f,0.f,0.f};
+	sceneDesc.gravity = {0.f,-9.81f *40.f,0.f};//{0.f,0.f,0.f};
 	sceneDesc.simulationEventCallback = m_simEventCallback.get();
-	sceneDesc.filterShader = physx::PxDefaultSimulationFilterShader;
-	sceneDesc.filterCallback = m_simFilterCallback.get();
+	//sceneDesc.filterShader = physx::PxDefaultSimulationFilterShader;
+	//sceneDesc.filterCallback = m_simFilterCallback.get();
+	sceneDesc.filterShader	= VehicleFilterShader;
 	sceneDesc.kineKineFilteringMode = physx::PxPairFilteringMode::eDEFAULT;
 	sceneDesc.staticKineFilteringMode = physx::PxPairFilteringMode::eDEFAULT;
 	sceneDesc.broadPhaseType = physx::PxBroadPhaseType::eABP;
@@ -217,7 +237,7 @@ bool pragma::physics::PhysXEnvironment::Initialize()
 	m_scene = px_create_unique_ptr(g_pxPhysics->createScene(sceneDesc));
 	if(m_scene == nullptr)
 		return false;
-	m_scene->setGravity({0.f,0.f,0.f});
+	m_scene->setGravity({0.f,-9.81f *40.f,0.f});//{0.f,0.f,0.f});
 	m_cooking = px_create_unique_ptr(PxCreateCooking(PX_PHYSICS_VERSION,*g_pxFoundation,physx::PxCookingParams(scale)));
 	if(m_cooking == nullptr)
 		return false;
@@ -336,14 +356,14 @@ pragma::physics::IEnvironment::RemainingDeltaTime pragma::physics::PhysXEnvironm
 	auto numSubSteps = umath::floor(t);
 	for(auto i=decltype(numSubSteps){0u};i<numSubSteps;++i)
 	{
+		for(auto &vhc : GetVehicles())
+			PhysXVehicle::GetVehicle(*vhc).Simulate(fixedTimeStep);
+
 		m_scene->simulate(fixedTimeStep);
 		physx::PxU32 err;
 		auto success = m_scene->fetchResults(true,&err);
 		if(err)
 			;
-
-		for(auto &vhc : GetVehicles())
-			PhysXVehicle::GetVehicle(*vhc).Simulate(fixedTimeStep);
 	}
 
 	for(auto &hController : GetControllers())
