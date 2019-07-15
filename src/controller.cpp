@@ -264,7 +264,7 @@ void pragma::physics::CustomUserControllerHitReport::onShapeHit(const physx::PxC
 	controller->m_touchingHits.push_back({});
 	auto &touchingHit = controller->m_touchingHits.back();
 	auto *shape = hit.shape ? PhysXEnvironment::GetShape(*hit.shape) : nullptr;
-	touchingHit.shape = shape ? std::static_pointer_cast<IShape>(shape->shared_from_this()) : std::weak_ptr<pragma::physics::IShape>{};
+	touchingHit.shape = shape ? std::static_pointer_cast<IShape>(shape->GetShape().shared_from_this()) : std::weak_ptr<pragma::physics::IShape>{};
 
 	auto *actor = hit.actor ? PhysXEnvironment::GetCollisionObject(*hit.actor) : nullptr;
 	touchingHit.body = actor ? util::weak_shared_handle_cast<IBase,IRigidBody>(actor->GetHandle()) : util::TWeakSharedHandle<pragma::physics::IRigidBody>{};
@@ -274,9 +274,9 @@ void pragma::physics::CustomUserControllerHitReport::onShapeHit(const physx::PxC
 	
 	auto *material = hit.shape ? hit.shape->getMaterialFromInternalFaceIndex(hit.triangleIndex) : nullptr;
 	auto *pxMaterial = material ? PhysXEnvironment::GetMaterial(*material) : nullptr;
-	if(material == nullptr)
+	if(material == nullptr && shape)
 	{
-		auto *surfMat = shape->GetSurfaceMaterial();
+		auto *surfMat = shape->GetShape().GetSurfaceMaterial();
 		pxMaterial = surfMat ? &PhysXMaterial::GetMaterial(surfMat->GetPhysicsMaterial()) : nullptr;
 	}
 	touchingHit.material = pxMaterial ? std::static_pointer_cast<IMaterial>(pxMaterial->shared_from_this()) : std::weak_ptr<pragma::physics::IMaterial>{};

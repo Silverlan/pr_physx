@@ -34,19 +34,15 @@ util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironm
 	case physx::PxGeometryType::eBOX:
 	{
 		// Geometry and shape will automatically be removed by controller
-		auto geometry = std::unique_ptr<physx::PxGeometry,void(*)(physx::PxGeometry*)>{&internalShape.getGeometry().box(),[](physx::PxGeometry*) {}};
-		auto pxShape = std::unique_ptr<physx::PxShape,void(*)(physx::PxShape*)>{&internalShape,[](physx::PxShape*) {}};
-		shape = CreateSharedPtr<PhysXConvexShape>(*this,std::move(pxShape),std::move(geometry));
-		InitializeShape(*shape,true);
+		auto geometry = std::shared_ptr<physx::PxGeometry>{&internalShape.getGeometry().box(),[](physx::PxGeometry*) {}};
+		shape = CreateSharedPtr<PhysXConvexShape>(*this,geometry);
 		break;
 	}
 	case physx::PxGeometryType::eCAPSULE:
 	{
 		// Geometry and shape will automatically be removed by controller
-		auto geometry = std::unique_ptr<physx::PxGeometry,void(*)(physx::PxGeometry*)>{&internalShape.getGeometry().capsule(),[](physx::PxGeometry*) {}};
-		auto pxShape = std::unique_ptr<physx::PxShape,void(*)(physx::PxShape*)>{&internalShape,[](physx::PxShape*) {}};
-		shape = CreateSharedPtr<PhysXConvexShape>(*this,std::move(pxShape),std::move(geometry));
-		InitializeShape(*shape,true);
+		auto geometry = std::shared_ptr<physx::PxGeometry>{&internalShape.getGeometry().capsule(),[](physx::PxGeometry*) {}};
+		shape = CreateSharedPtr<PhysXConvexShape>(*this,geometry);
 		break;
 	}
 	default:
@@ -59,6 +55,7 @@ util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironm
 	auto rigidDynamic = std::unique_ptr<physx::PxActor,void(*)(physx::PxActor*)>{pActor,[](physx::PxActor*) {}};
 	auto *pRigidDynamic = static_cast<physx::PxRigidDynamic*>(rigidDynamic.get());
 	auto rigidBody = CreateSharedHandle<PhysXRigidDynamic>(*this,std::move(rigidDynamic),*shape,pRigidDynamic->getMass(),FromPhysXVector(pRigidDynamic->getMassSpaceInertiaTensor()));
+	rigidBody->GetActorShapeCollection().AddShape(*shape,internalShape);
 	InitializeCollisionObject(*rigidBody);
 
 	auto controller = util::shared_handle_cast<PhysXController,IController>(

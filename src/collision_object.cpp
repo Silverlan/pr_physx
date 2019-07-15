@@ -1,6 +1,7 @@
 #include "pr_physx/collision_object.hpp"
 #include "pr_physx/environment.hpp"
 #include "pr_physx/shape.hpp"
+#include "pr_physx/material.hpp"
 #include "pr_physx/controller.hpp"
 #include <extensions/PxRigidBodyExt.h>
 
@@ -11,7 +12,7 @@ pragma::physics::PhysXCollisionObject &pragma::physics::PhysXCollisionObject::Ge
 }
 const pragma::physics::PhysXCollisionObject &pragma::physics::PhysXCollisionObject::GetCollisionObject(const ICollisionObject &o) {return GetCollisionObject(const_cast<ICollisionObject&>(o));}
 pragma::physics::PhysXCollisionObject::PhysXCollisionObject(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape)
-	: ICollisionObject{env,shape},m_actor{std::move(actor)}
+	: ICollisionObject{env,shape},m_actor{std::move(actor)},m_actorShapeCollection{*this}
 {
 	SetUserData(this);
 }
@@ -19,6 +20,11 @@ void pragma::physics::PhysXCollisionObject::Initialize()
 {
 	ICollisionObject::Initialize();
 	GetInternalObject().userData = this;
+}
+void pragma::physics::PhysXCollisionObject::OnRemove()
+{
+	ApplyCollisionShape(nullptr);
+	ICollisionObject::OnRemove();
 }
 physx::PxActor &pragma::physics::PhysXCollisionObject::GetInternalObject() const {return *m_actor;}
 pragma::physics::PhysXEnvironment &pragma::physics::PhysXCollisionObject::GetPxEnv() const {return static_cast<PhysXEnvironment&>(m_physEnv);}
@@ -36,6 +42,16 @@ bool pragma::physics::PhysXCollisionObject::IsSleepReportEnabled() const
 {
 	return m_actor->getActorFlags().isSet(physx::PxActorFlag::eSEND_SLEEP_NOTIFIES);
 }
+
+void pragma::physics::PhysXCollisionObject::SetTrigger(bool bTrigger) {m_actorShapeCollection.SetTrigger(bTrigger);}
+bool pragma::physics::PhysXCollisionObject::IsTrigger() const {return m_actorShapeCollection.IsTrigger();}
+
+void pragma::physics::PhysXCollisionObject::SetLocalPose(const Transform &t)
+{
+	m_actorShapeCollection.SetLocalPose(t);
+}
+pragma::physics::Transform pragma::physics::PhysXCollisionObject::GetLocalPose() const {return m_actorShapeCollection.GetLocalPose();}
+pragma::physics::PhysXActorShapeCollection &pragma::physics::PhysXCollisionObject::GetActorShapeCollection() const {return m_actorShapeCollection;}
 void pragma::physics::PhysXCollisionObject::RemoveWorldObject()
 {
 	if(m_actor == nullptr || IsSpawned() == false)
@@ -122,12 +138,6 @@ void pragma::physics::PhysXRigidBody::SetWorldTransform(const Transform &t)
 	GetInternalObject().setGlobalPose(pxPose);
 }
 
-bool pragma::physics::PhysXRigidBody::IsTrigger()
-{
-	auto *pShape = GetCollisionShape();
-	return pShape ? pShape->IsTrigger() : false;
-}
-
 void pragma::physics::PhysXRigidBody::SetSimulationEnabled(bool b)
 {
 	GetInternalObject().setActorFlag(physx::PxActorFlag::eDISABLE_SIMULATION,!b);
@@ -155,6 +165,8 @@ void pragma::physics::PhysXRigidBody::DoAddWorldObject()
 
 void pragma::physics::PhysXRigidBody::ApplyCollisionShape(pragma::physics::IShape *optShape)
 {
+	if(m_controller.GetRawPtr())
+		return; // If this is a controller, we mustn't detach or attach any shapes
 	auto &o = GetInternalObject();
 	// Clear all current shapes
 	auto numShapes = o.getNbShapes();
@@ -163,26 +175,37 @@ void pragma::physics::PhysXRigidBody::ApplyCollisionShape(pragma::physics::IShap
 	for(auto i=decltype(numShapes){0u};i<numShapes;++i)
 	{
 		auto *pShape = shapes.at(i);
-		if(optShape != nullptr && pShape == &PhysXShape::GetShape(*optShape).GetInternalObject())
-			continue;
 		o.detachShape(*pShape);
 	}
 	//
+	m_actorShapeCollection.Clear();
 	if(optShape == nullptr || o.getNbShapes() > 0)
 		return;
 	if(optShape->IsCompoundShape() == false)
 	{
-		o.attachShape(PhysXShape::GetShape(*optShape).GetInternalObject());
+		auto *mat = PhysXShape::GetShape(*optShape).GetMaterial();
+		if(mat == nullptr)
+			mat = &GetPxEnv().GetGenericMaterial();
+		m_actorShapeCollection.AttachShapeToActor(PhysXShape::GetShape(*optShape),PhysXMaterial::GetMaterial(*mat));
 		return;
 	}
 	auto &compoundShape = static_cast<PhysXCompoundShape&>(PhysXShape::GetShape(*optShape));
 	auto &subShapes = compoundShape.GetShapes();
+	std::vector<physx::PxShape*> pxShapes {};
+	pxShapes.reserve(subShapes.size());
 	for(auto i=decltype(subShapes.size()){0u};i<subShapes.size();++i)
 	{
-		auto &shape = subShapes.at(i);
-		if(shape->IsCompoundShape() == false)
+		auto &shapeInfo = subShapes.at(i);
+		if(shapeInfo.shape->IsCompoundShape() == true)
 			continue; // Compound shapes of compound shapes currently not supported
-		o.attachShape(PhysXShape::GetShape(*shape).GetInternalObject());
+		auto *mat = PhysXShape::GetShape(*shapeInfo.shape).GetMaterial();
+		if(mat == nullptr)
+		{
+			mat = compoundShape.GetMaterial();
+			if(mat == nullptr)
+				mat = &GetPxEnv().GetGenericMaterial();
+		}
+		m_actorShapeCollection.AttachShapeToActor(PhysXShape::GetShape(*shapeInfo.shape),PhysXMaterial::GetMaterial(*mat));
 	}
 }
 void pragma::physics::PhysXRigidBody::DoSetCollisionFilterGroup(CollisionMask group)
@@ -298,6 +321,10 @@ void pragma::physics::PhysXRigidDynamic::SetMass(float mass)
 {
 	GetInternalObject().setMass(mass);
 }
+Vector3 pragma::physics::PhysXRigidDynamic::GetCenterOfMass() const
+{
+	return GetPxEnv().FromPhysXVector(GetInternalObject().getCMassLocalPose().p);
+}
 Vector3 pragma::physics::PhysXRigidDynamic::GetLinearVelocity() const
 {
 	return GetPxEnv().FromPhysXVector(GetInternalObject().getLinearVelocity());
@@ -406,7 +433,7 @@ void pragma::physics::PhysXRigidDynamic::ApplyCollisionShape(pragma::physics::IS
 	if(optShape == nullptr)
 		return;
 	auto &o = GetInternalObject();
-	physx::PxRigidBodyExt::setMassAndUpdateInertia(o,optShape->GetMass(),nullptr,optShape->IsTrigger());
+	physx::PxRigidBodyExt::setMassAndUpdateInertia(o,GetMass(),nullptr,IsTrigger());
 }
 
 //////////////////
@@ -435,6 +462,7 @@ Vector3 pragma::physics::PhysXRigidStatic::GetTotalForce() const {return Vector3
 Vector3 pragma::physics::PhysXRigidStatic::GetTotalTorque() const {return Vector3{};}
 float pragma::physics::PhysXRigidStatic::GetMass() const {return 0.f;}
 void pragma::physics::PhysXRigidStatic::SetMass(float mass) {}
+Vector3 pragma::physics::PhysXRigidStatic::GetCenterOfMass() const {return Vector3{};}
 Vector3 pragma::physics::PhysXRigidStatic::GetLinearVelocity() const {return Vector3{};}
 Vector3 pragma::physics::PhysXRigidStatic::GetAngularVelocity() const {return Vector3{};}
 void pragma::physics::PhysXRigidStatic::SetLinearVelocity(const Vector3 &vel) {}

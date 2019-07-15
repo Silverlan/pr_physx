@@ -6,96 +6,6 @@
 #include <pragma/networkstate/networkstate.h>
 #include <vehicle/PxVehicleSDK.h>
 
-namespace snippetvehicle
-{
-
-	using namespace physx;
-
-	enum
-	{
-		DRIVABLE_SURFACE = 0xffff0000,
-		UNDRIVABLE_SURFACE = 0x0000ffff
-	};
-
-	void setupDrivableSurface(PxFilterData& filterData);
-
-	void setupNonDrivableSurface(PxFilterData& filterData);
-
-
-	PxQueryHitType::Enum WheelSceneQueryPreFilterBlocking
-	(PxFilterData filterData0, PxFilterData filterData1,
-		const void* constantBlock, PxU32 constantBlockSize,
-		PxHitFlags& queryFlags);
-
-	PxQueryHitType::Enum WheelSceneQueryPostFilterBlocking
-	(PxFilterData queryFilterData, PxFilterData objectFilterData,
-		const void* constantBlock, PxU32 constantBlockSize,
-		const PxQueryHit& hit);
-
-	PxQueryHitType::Enum WheelSceneQueryPreFilterNonBlocking
-	(PxFilterData filterData0, PxFilterData filterData1,
-		const void* constantBlock, PxU32 constantBlockSize,
-		PxHitFlags& queryFlags);
-
-	PxQueryHitType::Enum WheelSceneQueryPostFilterNonBlocking
-	(PxFilterData queryFilterData, PxFilterData objectFilterData,
-		const void* constantBlock, PxU32 constantBlockSize,
-		const PxQueryHit& hit);
-
-
-	//Data structure for quick setup of scene queries for suspension queries.
-	class VehicleSceneQueryData
-	{
-	public:
-		VehicleSceneQueryData();
-		~VehicleSceneQueryData();
-
-		//Allocate scene query data for up to maxNumVehicles and up to maxNumWheelsPerVehicle with numVehiclesInBatch per batch query.
-		static VehicleSceneQueryData* allocate
-		(const PxU32 maxNumVehicles, const PxU32 maxNumWheelsPerVehicle, const PxU32 maxNumHitPointsPerWheel, const PxU32 numVehiclesInBatch,
-			PxBatchQueryPreFilterShader preFilterShader, PxBatchQueryPostFilterShader postFilterShader);
-
-		//Free allocated buffers.
-		void free(PxAllocatorCallback& allocator);
-
-		//Create a PxBatchQuery instance that will be used for a single specified batch.
-		static PxBatchQuery* setUpBatchedSceneQuery(const PxU32 batchId, const VehicleSceneQueryData& vehicleSceneQueryData, PxScene* scene);
-
-		//Return an array of scene query results for a single specified batch.
-		PxRaycastQueryResult* getRaycastQueryResultBuffer(const PxU32 batchId); 
-
-		//Return an array of scene query results for a single specified batch.
-		PxSweepQueryResult* getSweepQueryResultBuffer(const PxU32 batchId); 
-
-		//Get the number of scene query results that have been allocated for a single batch.
-		PxU32 getQueryResultBufferSize() const; 
-
-	private:
-
-		//Number of queries per batch
-		PxU32 mNumQueriesPerBatch;
-
-		//Number of hit results per query
-		PxU32 mNumHitResultsPerQuery;
-
-		//One result for each wheel.
-		PxRaycastQueryResult* mRaycastResults;
-		PxSweepQueryResult* mSweepResults;
-
-		//One hit for each wheel.
-		PxRaycastHit* mRaycastHitBuffer;
-		PxSweepHit* mSweepHitBuffer;
-
-		//Filter shader used to filter drivable and non-drivable surfaces
-		PxBatchQueryPreFilterShader mPreFilterShader;
-
-		//Filter shader used to reject hit shapes that initially overlap sweeps.
-		PxBatchQueryPostFilterShader mPostFilterShader;
-
-	};
-
-} // namespace snippetvehicle
-
 enum
 {
 	SURFACE_TYPE_MUD=0,
@@ -105,7 +15,7 @@ enum
 	MAX_NUM_SURFACE_TYPES
 };
 
-
+#pragma optimize("",off)
 namespace snippetvehicle
 {
 
@@ -356,7 +266,6 @@ enum
 	COLLISION_FLAG_DRIVABLE_OBSTACLE_AGAINST=	COLLISION_FLAG_GROUND 						 |	COLLISION_FLAG_CHASSIS | COLLISION_FLAG_OBSTACLE | COLLISION_FLAG_DRIVABLE_OBSTACLE,
 };
 
-#pragma optimize("",off)
 namespace pragma::physics
 {
 	struct WheelCreateInfo
@@ -399,42 +308,6 @@ namespace pragma::physics
 		Vector3 CMOffset;
 	};
 };
-static void create_wheel(const pragma::physics::WheelCreateInfo &wheelCreateInfo)
-{
-#if 0
-	// https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Vehicles.html#setupwheelssimulationdata
-	//Set up the wheels.
-	PxVehicleWheelData wheels[PX_MAX_NB_WHEELS];
-	{
-		//Set up the wheel data structures with mass, moi, radius, width.
-		for(PxU32 i = 0; i < numWheels; i++)
-		{
-			wheels[i].mMass = wheelMass;
-			wheels[i].mMOI = wheelMOI;
-			wheels[i].mRadius = wheelRadius;
-			wheels[i].mWidth = wheelWidth;
-		}
-
-		//Enable the handbrake for the rear wheels only.
-		wheels[PxVehicleDrive4WWheelOrder::eREAR_LEFT].mMaxHandBrakeTorque=4000.0f;
-		wheels[PxVehicleDrive4WWheelOrder::eREAR_RIGHT].mMaxHandBrakeTorque=4000.0f;
-		//Enable steering for the front wheels only.
-		wheels[PxVehicleDrive4WWheelOrder::eFRONT_LEFT].mMaxSteer=PxPi*0.3333f;
-		wheels[PxVehicleDrive4WWheelOrder::eFRONT_RIGHT].mMaxSteer=PxPi*0.3333f;
-	}
-
-	//Set up the tires.
-	PxVehicleTireData tires[PX_MAX_NB_WHEELS];
-	{
-		//Set up the tires.
-		for(PxU32 i = 0; i < numWheels; i++)
-		{
-			tires[i].mType = TIRE_TYPE_NORMAL;
-		}
-	}
-#endif
-}
-
 void customizeVehicleToLengthScale(const physx::PxReal lengthScale, physx::PxRigidDynamic* rigidDynamic, physx::PxVehicleWheelsSimData* wheelsSimData, physx::PxVehicleDriveSimData* driveSimData)
 {
 	//Rigid body center of mass and moment of inertia.
@@ -617,114 +490,67 @@ static void setupNonDrivableSurface(physx::PxFilterData& filterData)
 	filterData.word3 = UNDRIVABLE_SURFACE;
 }
 
-static physx::PxRigidDynamic* setupVehicleActor
-(const physx::PxVehicleChassisData& chassisData,
-	physx::PxMaterial** wheelMaterials, physx::PxConvexMesh** wheelConvexMeshes, const physx::PxU32 numWheels, const physx::PxFilterData& wheelSimFilterData,
-	physx::PxMaterial** chassisMaterials, physx::PxConvexMesh** chassisConvexMeshes, const physx::PxU32 numChassisMeshes, const physx::PxFilterData& chassisSimFilterData,
-	physx::PxPhysics& physics)
-{
-	//We need a rigid body actor for the vehicle.
-	//Don't forget to add the actor to the scene after setting up the associated vehicle.
-	physx::PxRigidDynamic* vehActor = physics.createRigidDynamic(physx::PxTransform(physx::PxIdentity));
-
-	//Wheel and chassis query filter data.
-	//Optional: cars don't drive on other cars.
-	physx::PxFilterData wheelQryFilterData;
-	setupNonDrivableSurface(wheelQryFilterData);
-	physx::PxFilterData chassisQryFilterData;
-	setupNonDrivableSurface(chassisQryFilterData);
-
-	//Add all the wheel shapes to the actor.
-	for(physx::PxU32 i = 0; i < numWheels; i++)
-	{
-		physx::PxConvexMeshGeometry geom(wheelConvexMeshes[i]);
-		physx::PxShape* wheelShape=physx::PxRigidActorExt::createExclusiveShape(*vehActor, geom, *wheelMaterials[i]);
-		wheelShape->setQueryFilterData(wheelQryFilterData);
-		wheelShape->setSimulationFilterData(wheelSimFilterData);
-		wheelShape->setLocalPose(physx::PxTransform(physx::PxIdentity));
-	}
-
-	//Add the chassis shapes to the actor.
-	for(physx::PxU32 i = 0; i < numChassisMeshes; i++)
-	{
-		physx::PxShape* chassisShape=physx::PxRigidActorExt::createExclusiveShape(*vehActor, physx::PxConvexMeshGeometry(chassisConvexMeshes[i]), *chassisMaterials[i]);
-		chassisShape->setQueryFilterData(chassisQryFilterData);
-		chassisShape->setSimulationFilterData(chassisSimFilterData);
-		chassisShape->setLocalPose(physx::PxTransform(physx::PxIdentity));
-	}
-
-	vehActor->setMass(chassisData.mMass);
-	vehActor->setMassSpaceInertiaTensor(chassisData.mMOI);
-	vehActor->setCMassLocalPose(physx::PxTransform(chassisData.mCMOffset,physx::PxQuat(physx::PxIdentity)));
-
-	return vehActor;
-}
-
-static physx::PxConvexMesh* createConvexMesh(const physx::PxVec3* verts, const physx::PxU32 numVerts, physx::PxPhysics& physics, physx::PxCooking& cooking)
-{
-	// Create descriptor for convex mesh
-	physx::PxConvexMeshDesc convexDesc;
-	convexDesc.points.count			= numVerts;
-	convexDesc.points.stride		= sizeof(physx::PxVec3);
-	convexDesc.points.data			= verts;
-	convexDesc.flags				= physx::PxConvexFlag::eCOMPUTE_CONVEX;
-
-	physx::PxConvexMesh* convexMesh = NULL;
-	physx::PxDefaultMemoryOutputStream buf;
-	if(cooking.cookConvexMesh(convexDesc, buf))
-	{
-		physx::PxDefaultMemoryInputData id(buf.getData(), buf.getSize());
-		convexMesh = physics.createConvexMesh(id);
-	}
-
-	return convexMesh;
-}
-
-physx::PxConvexMesh* createChassisMesh(const physx::PxVec3 dims, physx::PxPhysics& physics, physx::PxCooking& cooking)
+std::shared_ptr<pragma::physics::IConvexHullShape> createChassisMesh(pragma::physics::PhysXEnvironment &env,const physx::PxVec3 dims,pragma::physics::IMaterial &mat)
 {
 	const physx::PxF32 x = dims.x*0.5f;
 	const physx::PxF32 y = dims.y*0.5f;
 	const physx::PxF32 z = dims.z*0.5f;
-	physx::PxVec3 verts[8] =
-	{
-		physx::PxVec3(x,y,-z), 
-		physx::PxVec3(x,y,z),
-		physx::PxVec3(x,-y,z),
-		physx::PxVec3(x,-y,-z),
-		physx::PxVec3(-x,y,-z), 
-		physx::PxVec3(-x,y,z),
-		physx::PxVec3(-x,-y,z),
-		physx::PxVec3(-x,-y,-z)
-	};
-
-	return createConvexMesh(verts,8,physics,cooking);
+	auto shape = env.CreateConvexHullShape(mat);
+	shape->ReservePoints(8);
+	shape->AddPoint(Vector3(x,y,-z));
+	shape->AddPoint(Vector3(x,y,z));
+	shape->AddPoint(Vector3(x,-y,z));
+	shape->AddPoint(Vector3(x,-y,-z));
+	shape->AddPoint(Vector3(-x,y,-z)); 
+	shape->AddPoint(Vector3(-x,y,z));
+	shape->AddPoint(Vector3(-x,-y,z));
+	shape->AddPoint(Vector3(-x,-y,-z));
+	shape->Build();
+	return shape;
 }
 
-physx::PxConvexMesh* createWheelMesh(const physx::PxF32 width, const physx::PxF32 radius, physx::PxPhysics& physics, physx::PxCooking& cooking)
+std::shared_ptr<pragma::physics::IConvexHullShape> createWheelMesh(pragma::physics::PhysXEnvironment &env,const physx::PxF32 width, const physx::PxF32 radius,pragma::physics::IMaterial &mat)
 {
-	physx::PxVec3 points[2*16];
+	auto shape = env.CreateConvexHullShape(mat);
+	shape->ReservePoints(32);
 	for(physx::PxU32 i = 0; i < 16; i++)
 	{
 		const physx::PxF32 cosTheta = physx::PxCos(i*physx::PxPi*2.0f/16.0f);
 		const physx::PxF32 sinTheta = physx::PxSin(i*physx::PxPi*2.0f/16.0f);
 		const physx::PxF32 y = radius*cosTheta;
 		const physx::PxF32 z = radius*sinTheta;
-		points[2*i+0] = physx::PxVec3(-width/2.0f, y, z);
-		points[2*i+1] = physx::PxVec3(+width/2.0f, y, z);
+		shape->AddPoint(Vector3{-width/2.0f, y, z});
+		shape->AddPoint(Vector3{+width/2.0f, y, z});
 	}
-
-	return createConvexMesh(points,32,physics,cooking);
+	shape->Build();
+	return shape;
 }
 
-physx::PxRigidDynamic* createVehicleActor
+util::TSharedHandle<pragma::physics::PhysXRigidBody> createVehicleActor
 (const physx::PxVehicleChassisData& chassisData,
-	physx::PxMaterial** wheelMaterials, physx::PxConvexMesh** wheelConvexMeshes, const physx::PxU32 numWheels, const physx::PxFilterData& wheelSimFilterData,
-	physx::PxMaterial** chassisMaterials, physx::PxConvexMesh** chassisConvexMeshes, const physx::PxU32 numChassisMeshes, const physx::PxFilterData& chassisSimFilterData,
+	std::shared_ptr<pragma::physics::IConvexHullShape>* wheelConvexMeshes, const physx::PxU32 numWheels, const physx::PxFilterData& wheelSimFilterData,
+	std::shared_ptr<pragma::physics::PhysXShape> &chassisShape, const physx::PxU32 numChassisMeshes, const physx::PxFilterData& chassisSimFilterData,
 	physx::PxPhysics& physics)
 {
 	//We need a rigid body actor for the vehicle.
 	//Don't forget to add the actor to the scene after setting up the associated vehicle.
+
+	//Add the chassis shapes to the actor.
+	auto *mat = pragma::physics::PhysXShape::GetShape(*chassisShape).GetMaterial();
+	if(mat == nullptr)
+		mat = &chassisShape->GetPxEnv().GetGenericMaterial();
+	std::vector<pragma::physics::IShape*> vhcShapes {};
+	chassisShape->SetMaterial(*mat);
+	/*auto actorShape = chassisShape->GetPxEnv().CreateActorShape(
+		*physx::PxRigidActorExt::createExclusiveShape(
+			*vehActor,pragma::physics::PhysXShape::GetShape(*chassisShape).GetInternalObject().any(),pragma::physics::PhysXMaterial::GetMaterial(*mat).GetInternalObject()
+		)
+	);
 	physx::PxRigidDynamic* vehActor = physics.createRigidDynamic(physx::PxTransform(physx::PxIdentity));
+	*/
+
+
+	
 
 	//Wheel and chassis query filter data.
 	//Optional: cars don't drive on other cars.
@@ -736,27 +562,39 @@ physx::PxRigidDynamic* createVehicleActor
 	//Add all the wheel shapes to the actor.
 	for(physx::PxU32 i = 0; i < numWheels; i++)
 	{
-		physx::PxConvexMeshGeometry geom(wheelConvexMeshes[i]);
-		physx::PxShape* wheelShape=physx::PxRigidActorExt::createExclusiveShape(*vehActor, geom, *wheelMaterials[i]);
-		wheelShape->setQueryFilterData(wheelQryFilterData);
-		wheelShape->setSimulationFilterData(wheelSimFilterData);
-		wheelShape->setLocalPose(physx::PxTransform(physx::PxIdentity));
+		auto wheelShape = std::dynamic_pointer_cast<pragma::physics::PhysXConvexHullShape>(wheelConvexMeshes[i]);
+		auto *mat = pragma::physics::PhysXShape::GetShape(*wheelShape).GetMaterial();
+		if(mat == nullptr)
+			mat = &wheelShape->GetPxEnv().GetGenericMaterial();
+		wheelShape->SetMaterial(*mat);
+		vhcShapes.push_back(wheelShape.get());
 	}
+	vhcShapes.push_back(chassisShape.get());
 
-	//Add the chassis shapes to the actor.
-	for(physx::PxU32 i = 0; i < numChassisMeshes; i++)
+
+	auto compoundShape = chassisShape->GetPxEnv().CreateCompoundShape(vhcShapes);
+	auto rigidBody = util::shared_handle_cast<pragma::physics::IRigidBody,pragma::physics::PhysXRigidBody>(chassisShape->GetPxEnv().CreateRigidBody(chassisData.mMass,*compoundShape,Vector3{},true));
+
+	auto &actorShapes = rigidBody->GetActorShapeCollection().GetActorShapes();
+	auto &chassisActorShape = actorShapes.back();
+	auto &pxActorShape = chassisActorShape->GetActorShape();
+	pxActorShape.setQueryFilterData(chassisQryFilterData);
+	pxActorShape.setSimulationFilterData(chassisSimFilterData);
+	pxActorShape.setLocalPose(physx::PxTransform(physx::PxIdentity));
+
+	for(auto i=0;i<actorShapes.size() -1;++i)
 	{
-		physx::PxShape* chassisShape=physx::PxRigidActorExt::createExclusiveShape(*vehActor, physx::PxConvexMeshGeometry(chassisConvexMeshes[i]), *chassisMaterials[i]);
-		chassisShape->setQueryFilterData(chassisQryFilterData);
-		chassisShape->setSimulationFilterData(chassisSimFilterData);
-		chassisShape->setLocalPose(physx::PxTransform(physx::PxIdentity));
+		auto &pxActorShape = actorShapes.at(i)->GetActorShape();
+		pxActorShape.setQueryFilterData(wheelQryFilterData);
+		pxActorShape.setSimulationFilterData(wheelSimFilterData);
+		pxActorShape.setLocalPose(physx::PxTransform(physx::PxIdentity));
 	}
 
-	vehActor->setMass(chassisData.mMass); // Scale?
-	vehActor->setMassSpaceInertiaTensor(chassisData.mMOI); // Scale?
-	vehActor->setCMassLocalPose(physx::PxTransform(chassisData.mCMOffset,physx::PxQuat(physx::PxIdentity)));
-
-	return vehActor;
+	auto &dynamicRigidActor = static_cast<physx::PxRigidDynamic&>(rigidBody->GetInternalObject());
+	dynamicRigidActor.setMass(chassisData.mMass); // Scale?
+	dynamicRigidActor.setMassSpaceInertiaTensor(chassisData.mMOI); // Scale?
+	dynamicRigidActor.setCMassLocalPose(physx::PxTransform(chassisData.mCMOffset,physx::PxQuat(physx::PxIdentity)));
+	return rigidBody;
 }
 
 void computeWheelCenterActorOffsets4W(const physx::PxF32 wheelFrontZ, const physx::PxF32 wheelRearZ, const physx::PxVec3& chassisDims, const physx::PxF32 wheelWidth, const physx::PxF32 wheelRadius, const physx::PxU32 numWheels, physx::PxVec3* wheelCentreOffsets)
@@ -996,7 +834,10 @@ void configureUserData(physx::PxVehicleWheels* vehicle, ActorUserData* actorUser
 	}
 }
 
-physx::PxVehicleDrive4W* createVehicle4W(const VehicleDesc& vehicleDesc, physx::PxPhysics* physics, physx::PxCooking* cooking)
+physx::PxVehicleDrive4W* createVehicle4W(
+	pragma::physics::PhysXEnvironment &env,const VehicleDesc& vehicleDesc, physx::PxPhysics* physics, physx::PxCooking* cooking,
+	util::TSharedHandle<pragma::physics::PhysXRigidBody> &outRigidBody
+)
 {
 	const physx::PxVec3 chassisDims = vehicleDesc.chassisDims;
 	const physx::PxF32 wheelWidth = vehicleDesc.wheelWidth;
@@ -1008,12 +849,12 @@ physx::PxVehicleDrive4W* createVehicle4W(const VehicleDesc& vehicleDesc, physx::
 
 	//Construct a physx actor with shapes for the chassis and wheels.
 	//Set the rigid body mass, moment of inertia, and center of mass offset.
-	physx::PxRigidDynamic* veh4WActor = NULL;
+	util::TSharedHandle<pragma::physics::PhysXRigidBody> veh4WActor = nullptr;
 	{
 		//Construct a convex mesh for a cylindrical wheel.
-		physx::PxConvexMesh* wheelMesh = createWheelMesh(wheelWidth, wheelRadius, *physics, *cooking);
+		auto wheelMesh = createWheelMesh(env, wheelWidth, wheelRadius, *pragma::physics::PhysXEnvironment::GetMaterial(*vehicleDesc.wheelMaterial));
 		//Assume all wheels are identical for simplicity.
-		physx::PxConvexMesh* wheelConvexMeshes[PX_MAX_NB_WHEELS];
+		std::array<std::shared_ptr<pragma::physics::IConvexHullShape>,PX_MAX_NB_WHEELS> wheelConvexMeshes;
 		physx::PxMaterial* wheelMaterials[PX_MAX_NB_WHEELS];
 
 		//Set the meshes and materials for the driven wheels.
@@ -1030,9 +871,8 @@ physx::PxVehicleDrive4W* createVehicle4W(const VehicleDesc& vehicleDesc, physx::
 		}
 
 		//Chassis just has a single convex shape for simplicity.
-		physx::PxConvexMesh* chassisConvexMesh = createChassisMesh(chassisDims, *physics, *cooking);
-		physx::PxConvexMesh* chassisConvexMeshes[1] = {chassisConvexMesh};
 		physx::PxMaterial* chassisMaterials[1] = {vehicleDesc.chassisMaterial};
+		auto chassisConvexMesh = createChassisMesh(env,chassisDims,*pragma::physics::PhysXEnvironment::GetMaterial(*chassisMaterials[0]));
 
 		//Rigid body data.
 		physx::PxVehicleChassisData rigidBodyData;
@@ -1042,8 +882,8 @@ physx::PxVehicleDrive4W* createVehicle4W(const VehicleDesc& vehicleDesc, physx::
 
 		veh4WActor = createVehicleActor
 		(rigidBodyData,
-			wheelMaterials, wheelConvexMeshes, numWheels, wheelSimFilterData,
-			chassisMaterials, chassisConvexMeshes, 1, chassisSimFilterData,
+			wheelConvexMeshes.data(), numWheels, wheelSimFilterData,
+			std::dynamic_pointer_cast<pragma::physics::PhysXShape>(chassisConvexMesh), 1, chassisSimFilterData,
 			*physics);
 	}
 
@@ -1111,10 +951,10 @@ physx::PxVehicleDrive4W* createVehicle4W(const VehicleDesc& vehicleDesc, physx::
 
 	//Create a vehicle from the wheels and drive sim data.
 	physx::PxVehicleDrive4W* vehDrive4W = physx::PxVehicleDrive4W::allocate(numWheels);
-	vehDrive4W->setup(physics, veh4WActor, *wheelsSimData, driveSimData, numWheels - 4);
+	vehDrive4W->setup(physics, &static_cast<physx::PxRigidDynamic&>(veh4WActor->GetInternalObject()), *wheelsSimData, driveSimData, numWheels - 4);
 	//Configure the userdata
 	configureUserData(vehDrive4W, vehicleDesc.actorUserData, vehicleDesc.shapeUserDatas);
-
+	outRigidBody = veh4WActor;
 	return vehDrive4W;
 }
 
@@ -1200,7 +1040,7 @@ physx::PxBatchQuery*			gBatchQuery = NULL;
 
 physx::PxVehicleDrivableSurfaceToTireFrictionPairs* gFrictionPairs = NULL;
 
-physx::PxRigidStatic*			gGroundPlane = NULL;
+util::TSharedHandle<pragma::physics::ICollisionObject>			gGroundPlane = nullptr;
 physx::PxVehicleDrive4W*		gVehicle4W		= NULL;
 
 bool					gIsVehicleInAir = true;
@@ -1318,24 +1158,21 @@ void releaseAllControls()
 	}
 }
 
-physx::PxRigidStatic* createDrivablePlane(const physx::PxFilterData& simFilterData, physx::PxMaterial* material, physx::PxPhysics* physics)
+util::TSharedHandle<pragma::physics::ICollisionObject> createDrivablePlane(pragma::physics::PhysXEnvironment &env,const physx::PxFilterData& simFilterData, pragma::physics::PhysXMaterial &mat, physx::PxPhysics* physics)
 {
-	//Add a plane to the scene.
-	physx::PxRigidStatic* groundPlane = PxCreatePlane(*physics, physx::PxPlane(0,1,0,0), *material);
-
-	//Get the plane shape so we can set query and simulation filter data.
-	physx::PxShape* shapes[1];
-	groundPlane->getShapes(shapes, 1);
-
+	auto plane = env.CreatePlane(Vector3{0.f,1.f,0.f},0.f,mat);
 	//Set the query filter data of the ground plane so that the vehicle raycasts can hit the ground.
 	physx::PxFilterData qryFilterData;
 	snippetvehicle::setupDrivableSurface(qryFilterData);
-	shapes[0]->setQueryFilterData(qryFilterData);
+
+	auto &actorShape = *static_cast<pragma::physics::PhysXRigidStatic&>(pragma::physics::PhysXCollisionObject::GetCollisionObject(*plane)).GetActorShapeCollection().GetActorShapes().front();
+	actorShape.GetActorShape().setQueryFilterData(qryFilterData);
 
 	//Set the simulation filter data of the ground plane so that it collides with the chassis of a vehicle but not the wheels.
-	shapes[0]->setSimulationFilterData(simFilterData);
+	actorShape.GetActorShape().setSimulationFilterData(simFilterData);
 
-	return groundPlane;
+	plane->Spawn();
+	return plane;
 }
 
 static physx::PxF32 gTireFrictionMultipliers[MAX_NUM_SURFACE_TYPES][MAX_NUM_TIRE_TYPES]=
@@ -1475,25 +1312,12 @@ util::TSharedHandle<pragma::physics::IVehicle> pragma::physics::PhysXEnvironment
 
 	//Create a plane to drive on.
 	physx::PxFilterData groundPlaneSimFilterData(COLLISION_FLAG_GROUND, COLLISION_FLAG_GROUND_AGAINST, 0, 0);
-	gGroundPlane = createDrivablePlane(groundPlaneSimFilterData, &gMaterial->GetInternalObject(), gPhysics);
-	physx::PxShape *planeShape;
-	gGroundPlane->getShapes(&planeShape,1);
-	// Geometry and shape will automatically be removed by controller
-	auto rigidStatic = std::unique_ptr<physx::PxActor,void(*)(physx::PxActor*)>{gGroundPlane,[](physx::PxActor*) {}};
-	auto *pRigidStatic = static_cast<physx::PxRigidStatic*>(rigidStatic.get());
-	auto planeGeometry = std::unique_ptr<physx::PxGeometry,void(*)(physx::PxGeometry*)>{&planeShape->getGeometry().plane(),[](physx::PxGeometry*) {}};
-	auto pxPlaneShape = std::unique_ptr<physx::PxShape,void(*)(physx::PxShape*)>{planeShape,[](physx::PxShape*) {}};
-	auto physxPlaneShape = CreateSharedPtr<PhysXShape>(*this,std::move(pxPlaneShape),std::move(planeGeometry));
-	InitializeShape(*physxPlaneShape,true);
-
-	auto planeRigidBody = CreateSharedHandle<PhysXRigidStatic>(*this,std::move(rigidStatic),*physxPlaneShape,0.f,Vector3{});
-	InitializeCollisionObject(*planeRigidBody);
-
-	gScene->addActor(*gGroundPlane);
+	gGroundPlane = createDrivablePlane(*this,groundPlaneSimFilterData,*gMaterial, gPhysics);
 
 	//Create a vehicle that will drive on the plane.
 	VehicleDesc vehicleDesc = initVehicleDesc();
-	auto gVehicle = px_create_unique_ptr<physx::PxVehicleDrive>(createVehicle4W(vehicleDesc, gPhysics, gCooking));
+	util::TSharedHandle<pragma::physics::PhysXRigidBody> rigidBody;
+	auto gVehicle = px_create_unique_ptr<physx::PxVehicleDrive>(createVehicle4W(*this,vehicleDesc, gPhysics, gCooking,rigidBody));
 	gVehicle4W = static_cast<physx::PxVehicleDrive4W*>(gVehicle.get());
 
 
@@ -1506,26 +1330,10 @@ util::TSharedHandle<pragma::physics::IVehicle> pragma::physics::PhysXEnvironment
 		gSteerVsForwardSpeedTable.mDataPairs[2*i +0] *= gLengthScale;
 	}
 
-	auto rigidDynamic = std::unique_ptr<physx::PxActor,void(*)(physx::PxActor*)>{gVehicle4W->getRigidDynamicActor(),[](physx::PxActor*) {}};
-	auto *pRigidDynamic = static_cast<physx::PxRigidDynamic*>(rigidDynamic.get());
-
-	physx::PxShape *shape;
-	pRigidDynamic->getShapes(&shape,1);
-
-	// Geometry and shape will automatically be removed by controller
-	auto geometry = std::unique_ptr<physx::PxGeometry,void(*)(physx::PxGeometry*)>{&shape->getGeometry().convexMesh(),[](physx::PxGeometry*) {}};
-	auto pxShape = std::unique_ptr<physx::PxShape,void(*)(physx::PxShape*)>{shape,[](physx::PxShape*) {}};
-	auto convexShape = CreateSharedPtr<PhysXConvexShape>(*this,std::move(pxShape),std::move(geometry));
-	InitializeShape(*convexShape,true);
-
-	auto rigidBody = CreateSharedHandle<PhysXRigidDynamic>(*this,std::move(rigidDynamic),*convexShape,pRigidDynamic->getMass(),FromPhysXVector(pRigidDynamic->getMassSpaceInertiaTensor()));
 	InitializeCollisionObject(*rigidBody);
-
-
 
 	physx::PxTransform startTransform(physx::PxVec3(0, ((vehicleDesc.chassisDims.y*0.5f + vehicleDesc.wheelRadius + 1.0f)*gLengthScale), 0), physx::PxQuat(physx::PxIdentity));
 	gVehicle4W->getRigidDynamicActor()->setGlobalPose(startTransform);
-	gScene->addActor(*gVehicle4W->getRigidDynamicActor());
 
 	//Set the vehicle to rest in first gear.
 	//Set the vehicle to use auto-gears.
@@ -1537,48 +1345,9 @@ util::TSharedHandle<pragma::physics::IVehicle> pragma::physics::PhysXEnvironment
 	gVehicleOrderProgress = 0;
 	startBrakeMode();
 
-	auto vhc = CreateSharedHandle<PhysXVehicle>(*this,std::move(gVehicle),util::shared_handle_cast<PhysXRigidDynamic,ICollisionObject>(rigidBody));
+	auto vhc = CreateSharedHandle<PhysXVehicle>(*this,std::move(gVehicle),util::shared_handle_cast<PhysXRigidBody,ICollisionObject>(rigidBody));
 	AddVehicle(*vhc);
+	vhc->Spawn();
 	return util::shared_handle_cast<PhysXVehicle,IVehicle>(vhc);
-#if 0
-	VehicleDesc vehicleDesc = initVehicleDesc();
-	auto gVehicle = px_create_unique_ptr<physx::PxVehicleDrive>(createVehicle4W(vehicleDesc, gPhysics, gCooking));
-	float TEST_SCALE = 1.f /0.025f;
-	customizeVehicleToLengthScale(TEST_SCALE, gVehicle->getRigidDynamicActor(), &gVehicle->mWheelsSimData, &static_cast<physx::PxVehicleDrive4W*>(gVehicle.get())->mDriveSimData);
-
-	auto *gVehicle4W = static_cast<physx::PxVehicleDrive4W*>(gVehicle.get());
-	physx::PxTransform startTransform(physx::PxVec3(0, (vehicleDesc.chassisDims.y*0.5f + vehicleDesc.wheelRadius + 1.0f), 0), physx::PxQuat(physx::PxIdentity));
-
-	// Actor will automatically be removed by controller
-	auto rigidDynamic = std::unique_ptr<physx::PxActor,void(*)(physx::PxActor*)>{gVehicle4W->getRigidDynamicActor(),[](physx::PxActor*) {}};
-	auto *pRigidDynamic = static_cast<physx::PxRigidDynamic*>(rigidDynamic.get());
-
-	physx::PxShape *shape;
-	pRigidDynamic->getShapes(&shape,1);
-
-	// Geometry and shape will automatically be removed by controller
-	auto geometry = std::unique_ptr<physx::PxGeometry,void(*)(physx::PxGeometry*)>{&shape->getGeometry().convexMesh(),[](physx::PxGeometry*) {}};
-	auto pxShape = std::unique_ptr<physx::PxShape,void(*)(physx::PxShape*)>{shape,[](physx::PxShape*) {}};
-	auto convexShape = CreateSharedPtr<PhysXConvexShape>(*this,std::move(pxShape),std::move(geometry));
-	InitializeShape(*convexShape,true);
-
-	auto rigidBody = CreateSharedHandle<PhysXRigidDynamic>(*this,std::move(rigidDynamic),*convexShape,pRigidDynamic->getMass(),FromPhysXVector(pRigidDynamic->getMassSpaceInertiaTensor()));
-	InitializeCollisionObject(*rigidBody);
-
-	gVehicle4W->getRigidDynamicActor()->setGlobalPose(startTransform);
-	gScene->addActor(*gVehicle4W->getRigidDynamicActor());
-
-	//Set the vehicle to rest in first gear.
-	//Set the vehicle to use auto-gears.
-	gVehicle4W->setToRestState();
-	gVehicle4W->mDriveDynData.forceGearChange(physx::PxVehicleGearsData::eFIRST);
-	gVehicle4W->mDriveDynData.setUseAutoGears(true);
-
-	auto vhc = CreateSharedHandle<PhysXVehicle>(*this,std::move(gVehicle),util::shared_handle_cast<PhysXRigidDynamic,ICollisionObject>(rigidBody));
-	AddVehicle(*vhc);
-	return util::shared_handle_cast<PhysXVehicle,IVehicle>(vhc);
-
-	//IEnvironment &env,PhysXUniquePtr<physx::PxVehicleDrive> vhc);
-#endif
 }
 #pragma optimize("",on)

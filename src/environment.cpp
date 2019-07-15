@@ -38,9 +38,9 @@ pragma::physics::PhysXConstraint *pragma::physics::PhysXEnvironment::GetConstrai
 {
 	return static_cast<pragma::physics::PhysXConstraint*>(constraint.userData);
 }
-pragma::physics::PhysXShape *pragma::physics::PhysXEnvironment::GetShape(const physx::PxShape &shape)
+pragma::physics::PhysXActorShape *pragma::physics::PhysXEnvironment::GetShape(const physx::PxShape &shape)
 {
-	return static_cast<pragma::physics::PhysXShape*>(shape.userData);
+	return static_cast<pragma::physics::PhysXActorShape*>(shape.userData);
 }
 pragma::physics::PhysXController *pragma::physics::PhysXEnvironment::GetController(const physx::PxController &controller)
 {
@@ -53,10 +53,19 @@ pragma::physics::PhysXMaterial *pragma::physics::PhysXEnvironment::GetMaterial(c
 pragma::physics::PhysXEnvironment::PhysXEnvironment(NetworkState &state)
 	: IEnvironment{state}
 {}
-pragma::physics::PhysXEnvironment::~PhysXEnvironment()
+
+void pragma::physics::PhysXEnvironment::OnRemove()
 {
+	IEnvironment::OnRemove();
+	m_controllerManager = nullptr;
 	m_cooking = nullptr;
 	m_scene = nullptr;
+	m_cpuDispatcher = nullptr;
+	m_surfaceTirePairs = nullptr;
+	m_controllerBehaviorCallback = nullptr;
+	m_controllerHitReport = nullptr;
+	m_simEventCallback = nullptr;
+	m_simFilterCallback = nullptr;
 }
 
 class PhysXErrorCallback
@@ -198,6 +207,11 @@ bool pragma::physics::PhysXEnvironment::Initialize()
 		g_pxPhysics = px_create_unique_ptr(PxCreatePhysics(PX_PHYSICS_VERSION,*g_pxFoundation,scale,bEnableDebugging,g_pxPvd.get()));
 		if(g_pxPhysics == nullptr)
 			return false;
+		if(PxInitExtensions(*g_pxPhysics,g_pxPvd.get()) == false || physx::PxInitVehicleSDK(*g_pxPhysics) == false)
+			return false;
+		// TODO
+		physx::PxVehicleSetBasisVectors(ToPhysXNormal(uvec::UP),ToPhysXNormal(Vector3{0.f,0.f,1.f}));//uvec::FORWARD));
+		physx::PxVehicleSetUpdateMode(physx::PxVehicleUpdateMode::eVELOCITY_CHANGE);
 	}
 
 	m_cpuDispatcher = px_create_unique_ptr(physx::PxDefaultCpuDispatcherCreate(6)); // TODO: Should match number of available hardware threads
@@ -247,11 +261,6 @@ bool pragma::physics::PhysXEnvironment::Initialize()
 		return false;
 	m_controllerManager->setOverlapRecoveryModule(true);
 	m_controllerManager->setDebugRenderingFlags(physx::PxControllerDebugRenderFlag::eALL);
-	if(PxInitExtensions(*g_pxPhysics,g_pxPvd.get()) == false || physx::PxInitVehicleSDK(*g_pxPhysics) == false)
-		return false;
-	// TODO
-	physx::PxVehicleSetBasisVectors(ToPhysXNormal(uvec::UP),ToPhysXNormal(Vector3{0.f,0.f,1.f}));//uvec::FORWARD));
-	physx::PxVehicleSetUpdateMode(physx::PxVehicleUpdateMode::eVELOCITY_CHANGE);
 
 	m_controllerBehaviorCallback = std::make_unique<CustomControllerBehaviorCallback>();
 	m_controllerHitReport = std::make_unique<CustomUserControllerHitReport>();
@@ -376,8 +385,8 @@ pragma::physics::IEnvironment::RemainingDeltaTime pragma::physics::PhysXEnvironm
 		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eACTOR_AXES,1.f);
 		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eBODY_AXES,1.f);
 		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_SHAPES,1.f);
-		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_DYNAMIC,1.f);
-		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_STATIC,1.f);
+		//m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_DYNAMIC,1.f);
+		//m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_STATIC,1.f);
 		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCONTACT_POINT,1.f);
 		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCONTACT_NORMAL,1.f);
 		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eWORLD_AXES,1.f);

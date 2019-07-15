@@ -25,7 +25,7 @@ physx::PxQueryHitType::Enum pragma::physics::RayCastFilterCallback::Filter(const
 	if(colObj->IsRigid() == false)
 		return physx::PxQueryHitType::eNONE;
 	auto hitType = (m_rayCastFilterCallback.*filter)(
-		*m_env.GetShape(*shape),
+		m_env.GetShape(*shape)->GetShape(),
 		*m_env.GetCollisionObject(*actor)->GetRigidBody()
 		);
 	switch(hitType)

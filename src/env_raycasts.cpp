@@ -23,7 +23,7 @@ void pragma::physics::PhysXEnvironment::InitializeRayCastResult(const TraceData 
 	if(raycastHit.shape)
 	{
 		auto &shape = *GetShape(*raycastHit.shape);
-		outResult.shape = std::static_pointer_cast<IShape>(shape.shared_from_this());
+		outResult.shape = std::static_pointer_cast<IShape>(shape.GetShape().shared_from_this());
 	}
 	outResult.distance = FromPhysXLength(raycastHit.distance);
 	outResult.fraction = rayLength /outResult.distance;
@@ -49,7 +49,7 @@ void pragma::physics::PhysXEnvironment::InitializeRayCastResult(const TraceData 
 	if(raycastHit.shape)
 	{
 		auto &shape = *GetShape(*raycastHit.shape);
-		outResult.shape = std::static_pointer_cast<IShape>(shape.shared_from_this());
+		outResult.shape = std::static_pointer_cast<IShape>(shape.GetShape().shared_from_this());
 	}
 	outResult.hitType = hitType;
 	outResult.startPosition = data.GetSourceOrigin();
@@ -71,7 +71,7 @@ void pragma::physics::PhysXEnvironment::InitializeRayCastResult(const TraceData 
 	if(raycastHit.shape)
 	{
 		auto &shape = *GetShape(*raycastHit.shape);
-		outResult.shape = std::static_pointer_cast<IShape>(shape.shared_from_this());
+		outResult.shape = std::static_pointer_cast<IShape>(shape.GetShape().shared_from_this());
 	}
 	outResult.distance = FromPhysXLength(raycastHit.distance);
 	outResult.fraction = rayLength /outResult.distance;

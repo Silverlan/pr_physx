@@ -39,10 +39,12 @@ namespace pragma::physics
 	class PhysXController;
 	class PhysXMaterial;
 	class PhysXShape;
+	class PhysXActorShape;
 	class PhysXVehicle;
 	class PhysXTriangleShape;
 	class PhysXConvexHullShape;
 	class PhysXSimulationFilterCallback;
+	class PhysXActorShapeCollection;
 	struct WheelCreateInfo;
 	struct TireCreateInfo;
 	struct ChassisCreateInfo;
@@ -51,12 +53,11 @@ namespace pragma::physics
 	{
 	public:
 		PhysXEnvironment(NetworkState &state);
-		virtual ~PhysXEnvironment() override;
 		static Transform CreateTransform(const physx::PxTransform &pxTransform);
 		static physx::PxTransform CreatePxTransform(const Transform &btTransform);
 		static PhysXCollisionObject *GetCollisionObject(const physx::PxRigidActor &actor);
 		static PhysXConstraint *GetConstraint(const physx::PxJoint &constraint);
-		static PhysXShape *GetShape(const physx::PxShape &shape);
+		static PhysXActorShape *GetShape(const physx::PxShape &shape);
 		static PhysXController *GetController(const physx::PxController &controller);
 		static PhysXMaterial *GetMaterial(const physx::PxMaterial &material);
 		static physx::PxFoundation &GetFoundation();
@@ -64,6 +65,7 @@ namespace pragma::physics
 		static physx::PxPvd &GetPVD();
 
 		virtual bool Initialize() override;
+		virtual void OnRemove() override;
 
 		virtual void StartProfiling() override;
 		virtual void EndProfiling() override;
@@ -100,6 +102,8 @@ namespace pragma::physics
 		virtual util::TSharedHandle<ISoftBody> CreateSoftBody(const PhysSoftBodyInfo &info,float mass,const std::vector<Vector3> &verts,const std::vector<uint16_t> &indices,std::vector<uint16_t> &indexTranslations) override;
 		virtual util::TSharedHandle<IGhostObject> CreateGhostObject(IShape &shape) override;
 
+		util::TSharedHandle<ICollisionObject> CreatePlane(const Vector3 &n,float d,const IMaterial &mat);
+
 		virtual std::shared_ptr<IConvexShape> CreateCapsuleShape(float halfWidth,float halfHeight,const IMaterial &mat) override;
 		virtual std::shared_ptr<IConvexShape> CreateBoxShape(const Vector3 &halfExtents,const IMaterial &mat) override;
 		virtual std::shared_ptr<IConvexShape> CreateCylinderShape(float radius,float height,const IMaterial &mat) override;
@@ -128,8 +132,9 @@ namespace pragma::physics
 	private:
 		friend PhysXTriangleShape;
 		friend PhysXConvexHullShape;
+		friend PhysXActorShapeCollection;
 		util::TSharedHandle<IController> CreateController(PhysXUniquePtr<physx::PxController> controller);
-		void InitializeShape(PhysXShape &shape,bool basicOnly=false);
+		void InitializeShape(PhysXActorShape &shape,bool basicOnly=false) const;
 		void InitializeCollisionObject(PhysXCollisionObject &o);
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxRaycastHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxOverlapHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;

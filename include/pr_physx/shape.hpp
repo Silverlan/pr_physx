@@ -9,6 +9,7 @@ namespace physx
 {
 	class PxShape;
 	class PxGeometry;
+	class PxGeometryHolder;
 };
 namespace pragma::physics
 {
@@ -20,37 +21,27 @@ namespace pragma::physics
 	public:
 		friend PhysXEnvironment;
 		friend IEnvironment;
+
 		static PhysXShape &GetShape(IShape &s);
 		static const PhysXShape &GetShape(const IShape &s);
 
-		const physx::PxShape &GetInternalObject() const;
-		physx::PxShape &GetInternalObject();
+		const physx::PxGeometryHolder &GetInternalObject() const;
+		physx::PxGeometryHolder &GetInternalObject();
 
 		virtual void CalculateLocalInertia(float mass,Vector3 *localInertia) const override;
 		virtual void GetAABB(Vector3 &min,Vector3 &max) const override;
 		virtual void GetBoundingSphere(Vector3 &outCenter,float &outRadius) const override;
 
 		virtual void ApplySurfaceMaterial(IMaterial &mat) override;
-		virtual float GetMass() const override;
-		virtual void SetMass(float mass) override;
-		virtual Vector3 GetCenterOfMass() const override;
-
-		virtual void SetTrigger(bool bTrigger) override;
-		virtual bool IsTrigger() const override;
-
-		virtual void SetLocalPose(const Transform &t) override;
-		virtual Transform GetLocalPose() const override;
+		IMaterial *GetMaterial() const;
 
 		virtual bool IsValid() const override;
-
 		PhysXEnvironment &GetPxEnv() const;
 	protected:
-		PhysXShape(IEnvironment &env,PhysXUniquePtr<physx::PxShape> shape,PhysXUniquePtr<physx::PxGeometry> geometry);
-		void UpdateShapeProperties();
-		PhysXUniquePtr<physx::PxGeometry> m_geometry = px_null_ptr<physx::PxGeometry>();
-		PhysXUniquePtr<physx::PxShape> m_shape = px_null_ptr<physx::PxShape>();
-		float m_mass = 0.f;
-		Vector3 m_centerOfMass = {};
+		PhysXShape(IEnvironment &env,const std::shared_ptr<physx::PxGeometry> &geometry);
+		std::shared_ptr<physx::PxGeometry> m_geometry = nullptr;
+		physx::PxGeometryHolder m_geometryHolder = {};
+		std::shared_ptr<IMaterial> m_material = nullptr;
 	};
 
 	class PhysXConvexShape
@@ -63,7 +54,7 @@ namespace pragma::physics
 
 		virtual void SetLocalScaling(const Vector3 &scale) override;
 	protected:
-		PhysXConvexShape(IEnvironment &env,PhysXUniquePtr<physx::PxShape> shape,PhysXUniquePtr<physx::PxGeometry> geometry);
+		PhysXConvexShape(IEnvironment &env,const std::shared_ptr<physx::PxGeometry> &geometry);
 	};
 
 	class PhysXConvexHullShape
@@ -96,7 +87,7 @@ namespace pragma::physics
 		virtual float GetRadius() const override;
 		virtual float GetHalfHeight() const override;
 	protected:
-		PhysXCapsuleShape(IEnvironment &env,PhysXUniquePtr<physx::PxShape> shape,PhysXUniquePtr<physx::PxGeometry> geometry);
+		PhysXCapsuleShape(IEnvironment &env,const std::shared_ptr<physx::PxGeometry> &geometry);
 	};
 
 	class PhysXBoxShape
@@ -108,7 +99,7 @@ namespace pragma::physics
 		friend IEnvironment;
 		virtual Vector3 GetHalfExtents() const override;
 	protected:
-		PhysXBoxShape(IEnvironment &env,PhysXUniquePtr<physx::PxShape> shape,PhysXUniquePtr<physx::PxGeometry> geometry);
+		PhysXBoxShape(IEnvironment &env,const std::shared_ptr<physx::PxGeometry> &geometry);
 	};
 
 	class PhysXCompoundShape
@@ -117,7 +108,7 @@ namespace pragma::physics
 	{
 	public:
 		friend IEnvironment;
-		virtual void AddShape(pragma::physics::IShape &shape) override;
+		virtual bool IsValid() const override;
 	protected:
 		PhysXCompoundShape(IEnvironment &env);
 	};
@@ -135,6 +126,35 @@ namespace pragma::physics
 		virtual void DoBuild(const std::vector<SurfaceMaterial> *materials=nullptr) override;
 	protected:
 		PhysXTriangleShape(IEnvironment &env);
+	};
+
+	///////////////
+
+	class PhysXActorShapeCollection;
+	class PhysXActorShape
+		: public IBase
+	{
+	public:
+		friend PhysXActorShapeCollection;
+
+		void SetTrigger(bool bTrigger);
+		bool IsTrigger() const;
+
+		void ApplySurfaceMaterial(IMaterial &mat);
+
+		void SetLocalPose(const Transform &t);
+		Transform GetLocalPose() const;
+
+		PhysXShape &GetShape() const;
+		physx::PxShape &GetActorShape() const;
+
+		PhysXEnvironment &GetPxEnv() const;
+	private:
+		using IBase::shared_from_this;
+		PhysXActorShape(IEnvironment &env,physx::PxShape &actorShape,PhysXShape &shape);
+
+		physx::PxShape &m_actorShape;
+		std::shared_ptr<PhysXShape> m_shape = nullptr;
 	};
 };
 

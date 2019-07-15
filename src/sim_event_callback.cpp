@@ -65,8 +65,8 @@ void pragma::physics::PhysXSimulationEventCallback::onContact(const physx::PxCon
 			contactInfo.flags |= ContactInfo::Flags::StartTouch;
 		if(contactPair.flags &physx::PxContactPairFlag::eACTOR_PAIR_LOST_TOUCH)
 			contactInfo.flags |= ContactInfo::Flags::EndTouch;
-		contactInfo.shape0 = contactPair.shapes[0] ? std::static_pointer_cast<IShape>(PhysXEnvironment::GetShape(*contactPair.shapes[0])->shared_from_this()) : nullptr;
-		contactInfo.shape1 = contactPair.shapes[1] ? std::static_pointer_cast<IShape>(PhysXEnvironment::GetShape(*contactPair.shapes[1])->shared_from_this()) : nullptr;
+		contactInfo.shape0 = contactPair.shapes[0] ? std::static_pointer_cast<IShape>(PhysXEnvironment::GetShape(*contactPair.shapes[0])->GetShape().shared_from_this()) : nullptr;
+		contactInfo.shape1 = contactPair.shapes[1] ? std::static_pointer_cast<IShape>(PhysXEnvironment::GetShape(*contactPair.shapes[1])->GetShape().shared_from_this()) : nullptr;
 		contactInfo.collisionObj0 = util::weak_shared_handle_cast<IBase,ICollisionObject>(actor0->GetHandle());
 		contactInfo.collisionObj1 = util::weak_shared_handle_cast<IBase,ICollisionObject>(actor1->GetHandle());
 		std::vector<physx::PxContactPairPoint> contactPoints {contactPair.contactCount};

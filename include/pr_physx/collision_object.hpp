@@ -13,6 +13,43 @@ namespace pragma::physics
 {
 	class PhysXController;
 	class PhysXEnvironment;
+	class PhysXActorShape;
+
+	class PhysXMaterial;
+	class PhysXShape;
+	class PhysXCollisionObject;
+	class PhysXRigidBody;
+	class PhysXActorShapeCollection
+	{
+	public:
+		friend PhysXCollisionObject;
+		friend PhysXRigidBody;
+		PhysXActorShapeCollection(PhysXCollisionObject &colObj);
+		const std::vector<std::unique_ptr<PhysXActorShape>> &GetActorShapes() const;
+
+		PhysXActorShape *AttachShapeToActor(PhysXShape &shape,PhysXMaterial &mat);
+		// Adds the shape to the shape list, but does not attach it to the
+		// actor. Assumes that it already has been attached to it!
+		PhysXActorShape *AddShape(PhysXShape &shape,physx::PxShape &actorShape);
+
+		void SetTrigger(bool bTrigger);
+		bool IsTrigger() const;
+
+		void ApplySurfaceMaterial(PhysXMaterial &mat);
+
+		void SetLocalPose(const Transform &t);
+		Transform GetLocalPose() const;
+		void CalcMassProps(float mass,Vector3 &centerOfMass);
+	private:
+		void Clear();
+		PhysXActorShape *AddShape(PhysXShape &shape,physx::PxShape &actorShape,bool applyPose);
+
+		// Contains one shape if created from a non-compound geometry,
+		// otherwise can contain more than one shape.
+		std::vector<std::unique_ptr<PhysXActorShape>> m_actorShapes = {};
+		PhysXCollisionObject &m_collisionObject;
+	};
+
 	class PhysXCollisionObject
 		: virtual public pragma::physics::ICollisionObject
 	{
@@ -26,10 +63,20 @@ namespace pragma::physics
 		virtual void GetAABB(Vector3 &min,Vector3 &max) const override;
 		virtual void SetSleepReportEnabled(bool reportEnabled) override;
 		virtual bool IsSleepReportEnabled() const override;
+
+		virtual void SetTrigger(bool bTrigger) override;
+		virtual bool IsTrigger() const override;
+
+		virtual void SetLocalPose(const Transform &t) override;
+		virtual Transform GetLocalPose() const override;
+
+		PhysXActorShapeCollection &GetActorShapeCollection() const;
 	protected:
 		virtual void Initialize() override;
+		virtual void OnRemove() override;
 		virtual void RemoveWorldObject() override;
 		virtual void DoAddWorldObject() override;
+		mutable PhysXActorShapeCollection m_actorShapeCollection;
 	private:
 		PhysXUniquePtr<physx::PxActor> m_actor = px_null_ptr<physx::PxActor>();
 	};
@@ -50,8 +97,6 @@ namespace pragma::physics
 		virtual void SetRotation(const Quat &rot) override;
 		virtual Transform GetWorldTransform() override;
 		virtual void SetWorldTransform(const Transform &t) override;
-
-		virtual bool IsTrigger() override;
 
 		virtual void SetSimulationEnabled(bool b) override;
 		virtual bool IsSimulationEnabled() const override;
@@ -105,6 +150,7 @@ namespace pragma::physics
 		virtual Vector3 GetTotalTorque() const override;
 		virtual float GetMass() const override;
 		virtual void SetMass(float mass) override;
+		virtual Vector3 GetCenterOfMass() const override;
 		virtual Vector3 GetLinearVelocity() const override;
 		virtual Vector3 GetAngularVelocity() const override;
 		virtual void SetLinearVelocity(const Vector3 &vel) override;
@@ -155,6 +201,7 @@ namespace pragma::physics
 		virtual Vector3 GetTotalTorque() const override;
 		virtual float GetMass() const override;
 		virtual void SetMass(float mass) override;
+		virtual Vector3 GetCenterOfMass() const override;
 		virtual Vector3 GetLinearVelocity() const override;
 		virtual Vector3 GetAngularVelocity() const override;
 		virtual void SetLinearVelocity(const Vector3 &vel) override;

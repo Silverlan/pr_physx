@@ -26,66 +26,10 @@ namespace snippetvehicle
 
 	using namespace physx;
 
-	enum
-	{
-		DRIVABLE_SURFACE = 0xffff0000,
-		UNDRIVABLE_SURFACE = 0x0000ffff
-	};
-
 	void setupDrivableSurface(PxFilterData& filterData);
 
 	void setupNonDrivableSurface(PxFilterData& filterData);
 
-	//Data structure for quick setup of scene queries for suspension queries.
-	class VehicleSceneQueryData
-	{
-	public:
-		VehicleSceneQueryData();
-		~VehicleSceneQueryData();
-
-		//Allocate scene query data for up to maxNumVehicles and up to maxNumWheelsPerVehicle with numVehiclesInBatch per batch query.
-		static VehicleSceneQueryData* allocate
-		(const PxU32 maxNumVehicles, const PxU32 maxNumWheelsPerVehicle, const PxU32 maxNumHitPointsPerWheel, const PxU32 numVehiclesInBatch,
-			PxBatchQueryPreFilterShader preFilterShader, PxBatchQueryPostFilterShader postFilterShader);
-
-		//Free allocated buffers.
-		void free(PxAllocatorCallback& allocator);
-
-		//Create a PxBatchQuery instance that will be used for a single specified batch.
-		static PxBatchQuery* setUpBatchedSceneQuery(const PxU32 batchId, const VehicleSceneQueryData& vehicleSceneQueryData, PxScene* scene);
-
-		//Return an array of scene query results for a single specified batch.
-		PxRaycastQueryResult* getRaycastQueryResultBuffer(const PxU32 batchId); 
-
-		//Return an array of scene query results for a single specified batch.
-		PxSweepQueryResult* getSweepQueryResultBuffer(const PxU32 batchId); 
-
-		//Get the number of scene query results that have been allocated for a single batch.
-		PxU32 getQueryResultBufferSize() const; 
-
-	private:
-
-		//Number of queries per batch
-		PxU32 mNumQueriesPerBatch;
-
-		//Number of hit results per query
-		PxU32 mNumHitResultsPerQuery;
-
-		//One result for each wheel.
-		PxRaycastQueryResult* mRaycastResults;
-		PxSweepQueryResult* mSweepResults;
-
-		//One hit for each wheel.
-		PxRaycastHit* mRaycastHitBuffer;
-		PxSweepHit* mSweepHitBuffer;
-
-		//Filter shader used to filter drivable and non-drivable surfaces
-		PxBatchQueryPreFilterShader mPreFilterShader;
-
-		//Filter shader used to reject hit shapes that initially overlap sweeps.
-		PxBatchQueryPostFilterShader mPostFilterShader;
-
-	};
 
 } // namespace snippetvehicle
 
@@ -145,6 +89,8 @@ extern physx::PxF32 gSteerVsForwardSpeedData[2*8];
 extern physx::PxFixedSizeLookupTable<8> gSteerVsForwardSpeedTable;
 void pragma::physics::PhysXVehicle::Simulate(float dt)
 {
+	if(IsSpawned() == false)
+		return;
 	const physx::PxF32 timestep = dt;//1.0f/60.0f;
 
 	//Cycle through the driving modes to demonstrate how to accelerate/reverse/brake/turn etc.
@@ -175,14 +121,6 @@ void pragma::physics::PhysXVehicle::Simulate(float dt)
 	//Work out if the vehicle is in the air.
 	gIsVehicleInAir = gVehicle4W->getRigidDynamicActor()->isSleeping() ? false : PxVehicleIsInAir(vehicleQueryResults[0]);
 
-	if(gVehicle4W->getRigidDynamicActor()->isSleeping())
-		Con::cerr<<"ASLEEP!"<<Con::endl;
-	if(gIsVehicleInAir)
-		std::cout<<"Vehicle in air!"<<std::endl;
-	std::cout<<"Tire friction: "<<vehicleQueryResults[0].wheelQueryResults->tireFriction<<std::endl;
-	auto *surfMat = vehicleQueryResults[0].wheelQueryResults->tireSurfaceMaterial;
-	if(surfMat)
-		std::cout<<"SurfMat: "<<surfMat->getDynamicFriction()<<","<<surfMat->getStaticFriction()<<","<<surfMat->getRestitution()<<std::endl;
 	/*std::array<physx::PxVehicleWheels*,1> vehicles = {m_vehicle.get()};
 	PxVehicleSuspensionRaycasts(m_raycastBatchQuery.get(),vehicles.size(),vehicles.data(),GetWheelCount(),m_raycastQueryResultPerWheel.data());
 
@@ -218,12 +156,35 @@ void pragma::physics::PhysXVehicle::Simulate(float dt)
 			Con::cout<<"HIT COLLISION OBJECT!"<<Con::endl;
 	}*/
 }
+void pragma::physics::PhysXVehicle::InitializeSceneBatchQuery(const snippetvehicle::VehicleSceneQueryData& vehicleSceneQueryData)
+{
+	const physx::PxU32 maxNumQueriesInBatch =  vehicleSceneQueryData.mNumQueriesPerBatch;
+	const physx::PxU32 maxNumHitResultsInBatch = vehicleSceneQueryData.mNumQueriesPerBatch*vehicleSceneQueryData.mNumHitResultsPerQuery;
+
+	physx::PxBatchQueryDesc sqDesc(maxNumQueriesInBatch, maxNumQueriesInBatch, 0);
+
+	sqDesc.queryMemory.userRaycastResultBuffer = vehicleSceneQueryData.mRaycastResults + maxNumQueriesInBatch;
+	sqDesc.queryMemory.userRaycastTouchBuffer = vehicleSceneQueryData.mRaycastHitBuffer + maxNumHitResultsInBatch;
+	sqDesc.queryMemory.raycastTouchBufferSize = maxNumHitResultsInBatch;
+
+	sqDesc.queryMemory.userSweepResultBuffer = vehicleSceneQueryData.mSweepResults + maxNumQueriesInBatch;
+	sqDesc.queryMemory.userSweepTouchBuffer = vehicleSceneQueryData.mSweepHitBuffer + maxNumHitResultsInBatch;
+	sqDesc.queryMemory.sweepTouchBufferSize = maxNumHitResultsInBatch;
+
+	sqDesc.preFilterShader = vehicleSceneQueryData.mPreFilterShader;
+
+	sqDesc.postFilterShader = vehicleSceneQueryData.mPostFilterShader;
+
+	m_raycastBatchQuery = px_create_unique_ptr(GetPxEnv().GetScene().createBatchQuery(sqDesc));
+}
 void pragma::physics::PhysXVehicle::Initialize()
 {
 	IVehicle::Initialize();
 	// TODO
 	// GetInternalObject().setUserData(this);
+	//InitializeSceneBatchQuery();
 
+#if 0
 	auto numWheels = GetWheelCount();
 	m_raycastQueryResultPerWheel.resize(numWheels);
 	m_wheelQueryResults.resize(numWheels);
@@ -244,6 +205,7 @@ void pragma::physics::PhysXVehicle::Initialize()
 				physx::PxQueryHitType::eNONE : physx::PxQueryHitType::eBLOCK);
 	};
 	m_raycastBatchQuery = px_create_unique_ptr(GetPxEnv().GetScene().createBatchQuery(sqDesc));
+#endif
 
 
 	//m_vehicle->mDriveDynData.setUseAutoGears(true);
@@ -264,8 +226,20 @@ float pragma::physics::PhysXVehicle::GetSidewaysSpeed() const
 {
 	return GetPxEnv().FromPhysXLength(m_vehicle->computeSidewaysSpeed());
 }
-void pragma::physics::PhysXVehicle::RemoveWorldObject() {}
+void pragma::physics::PhysXVehicle::RemoveWorldObject()
+{
+	if(m_collisionObject == nullptr)
+		return;
+	m_collisionObject->RemoveWorldObject();
+}
 void pragma::physics::PhysXVehicle::DoAddWorldObject() {}
+void pragma::physics::PhysXVehicle::DoSpawn()
+{
+	IVehicle::DoSpawn();
+	if(m_collisionObject == nullptr)
+		return;
+	m_collisionObject->Spawn();
+}
 pragma::physics::PhysXEnvironment &pragma::physics::PhysXVehicle::GetPxEnv() const {return static_cast<PhysXEnvironment&>(m_physEnv);}
 
 ////////////////
