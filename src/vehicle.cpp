@@ -4,18 +4,16 @@
 #include "pr_physx/query_filter_callback.hpp"
 #include <vehicle/PxVehicleUtil.h>
 
-enum
-{
-	DRIVABLE_SURFACE = 64,
-	UNDRIVABLE_SURFACE = 32
-};
 pragma::physics::PhysXVehicle &pragma::physics::PhysXVehicle::GetVehicle(IVehicle &c)
 {
 	return *static_cast<PhysXVehicle*>(c.GetUserData());
 }
 const pragma::physics::PhysXVehicle &GetVehicle(const pragma::physics::IVehicle &v) {return GetVehicle(const_cast<pragma::physics::IVehicle&>(v));}
-pragma::physics::PhysXVehicle::PhysXVehicle(IEnvironment &env,PhysXUniquePtr<physx::PxVehicleDrive> vhc,const util::TSharedHandle<ICollisionObject> &collisionObject)
-	: IVehicle{env,collisionObject},m_vehicle{std::move(vhc)}
+pragma::physics::PhysXVehicle::PhysXVehicle(
+	IEnvironment &env,PhysXUniquePtr<physx::PxVehicleDrive> vhc,const util::TSharedHandle<ICollisionObject> &collisionObject,
+	PhysXUniquePtr<physx::PxBatchQuery> raycastBatchQuery
+)
+	: IVehicle{env,collisionObject},m_vehicle{std::move(vhc)},m_raycastBatchQuery{std::move(raycastBatchQuery)}
 {
 	SetUserData(this);
 }
@@ -33,24 +31,17 @@ namespace snippetvehicle
 
 } // namespace snippetvehicle
 
-void incrementDrivingMode(const physx::PxF32 timestep);
-extern physx::PxVehicleDrive4WRawInputData gVehicleInputData;
-extern physx::PxF32					gVehicleModeLifetime;
-extern physx::PxF32					gVehicleModeTimer;
-extern physx::PxU32					gVehicleOrderProgress;
-extern bool					gVehicleOrderComplete;
-extern bool					gMimicKeyInputs;
-extern physx::PxF32 gLengthScale;
+physx::PxF32					gVehicleModeLifetime = 4.0f;
+physx::PxF32					gVehicleModeTimer = 0.0f;
+physx::PxU32					gVehicleOrderProgress = 0;
+bool					gVehicleOrderComplete = false;
 extern snippetvehicle::VehicleSceneQueryData*	gVehicleSceneQueryData;
-extern physx::PxBatchQuery*			gBatchQuery;
 
 extern physx::PxVehicleDrivableSurfaceToTireFrictionPairs* gFrictionPairs;
 
-extern physx::PxRigidStatic*			gGroundPlane;
-extern physx::PxVehicleDrive4W*		gVehicle4W;
 
-extern bool					gIsVehicleInAir;
-physx::PxVehicleKeySmoothingData gKeySmoothingData=
+// Source: PhysX vehicle demo samples
+static physx::PxVehicleKeySmoothingData gKeySmoothingData =
 {
 	{
 		6.0f,	//rise rate eANALOG_INPUT_ACCEL
@@ -68,7 +59,7 @@ physx::PxVehicleKeySmoothingData gKeySmoothingData=
 	}
 };
 
-physx::PxVehiclePadSmoothingData gPadSmoothingData=
+static physx::PxVehiclePadSmoothingData gPadSmoothingData =
 {
 	{
 		6.0f,		//rise rate eANALOG_INPUT_ACCEL
@@ -85,32 +76,25 @@ physx::PxVehiclePadSmoothingData gPadSmoothingData=
 		5.0f		//fall rate eANALOG_INPUT_STEER_RIGHT
 	}
 };
-extern physx::PxF32 gSteerVsForwardSpeedData[2*8];
 extern physx::PxFixedSizeLookupTable<8> gSteerVsForwardSpeedTable;
 void pragma::physics::PhysXVehicle::Simulate(float dt)
 {
 	if(IsSpawned() == false)
 		return;
 	const physx::PxF32 timestep = dt;//1.0f/60.0f;
-
-	//Cycle through the driving modes to demonstrate how to accelerate/reverse/brake/turn etc.
-	incrementDrivingMode(timestep);
+	auto *gVehicle4W = static_cast<physx::PxVehicleDrive4W*>(m_vehicle.get());
 
 	//Update the control inputs for the vehicle.
-	if(gMimicKeyInputs)
-	{
-		physx::PxVehicleDrive4WSmoothDigitalRawInputsAndSetAnalogInputs(gKeySmoothingData, gSteerVsForwardSpeedTable, gVehicleInputData, timestep, gIsVehicleInAir, *gVehicle4W);
-	}
+	if(ShouldUseDigitalInputs())
+		physx::PxVehicleDrive4WSmoothDigitalRawInputsAndSetAnalogInputs(gKeySmoothingData, gSteerVsForwardSpeedTable, m_inputData, timestep, IsInAir(), *gVehicle4W);
 	else
-	{
-		physx::PxVehicleDrive4WSmoothAnalogRawInputsAndSetAnalogInputs(gPadSmoothingData, gSteerVsForwardSpeedTable, gVehicleInputData, timestep, gIsVehicleInAir, *gVehicle4W);
-	}
+		physx::PxVehicleDrive4WSmoothAnalogRawInputsAndSetAnalogInputs(gPadSmoothingData, gSteerVsForwardSpeedTable, m_inputData, timestep, IsInAir(), *gVehicle4W);
 
 	//Raycasts.
 	physx::PxVehicleWheels* vehicles[1] = {gVehicle4W};
 	physx::PxRaycastQueryResult* raycastResults = gVehicleSceneQueryData->getRaycastQueryResultBuffer(0);
 	const physx::PxU32 raycastResultsSize = gVehicleSceneQueryData->getQueryResultBufferSize();
-	physx::PxVehicleSuspensionRaycasts(gBatchQuery, 1, vehicles, raycastResultsSize, raycastResults);
+	physx::PxVehicleSuspensionRaycasts(m_raycastBatchQuery.get(), 1, vehicles, raycastResultsSize, raycastResults);
 
 	//Vehicle update.
 	const physx::PxVec3 grav = GetPxEnv().GetScene().getGravity();//ToPhysXVector(Vector3{0.f,-9.81f *40.f,0.f});//gScene->getGravity();
@@ -119,7 +103,7 @@ void pragma::physics::PhysXVehicle::Simulate(float dt)
 	PxVehicleUpdates(timestep, grav, *gFrictionPairs, 1, vehicles, vehicleQueryResults);
 
 	//Work out if the vehicle is in the air.
-	gIsVehicleInAir = gVehicle4W->getRigidDynamicActor()->isSleeping() ? false : PxVehicleIsInAir(vehicleQueryResults[0]);
+	umath::set_flag(m_stateFlags,StateFlags::InAir,gVehicle4W->getRigidDynamicActor()->isSleeping() ? false : PxVehicleIsInAir(vehicleQueryResults[0]));
 
 	/*std::array<physx::PxVehicleWheels*,1> vehicles = {m_vehicle.get()};
 	PxVehicleSuspensionRaycasts(m_raycastBatchQuery.get(),vehicles.size(),vehicles.data(),GetWheelCount(),m_raycastQueryResultPerWheel.data());
@@ -241,6 +225,116 @@ void pragma::physics::PhysXVehicle::DoSpawn()
 	m_collisionObject->Spawn();
 }
 pragma::physics::PhysXEnvironment &pragma::physics::PhysXVehicle::GetPxEnv() const {return static_cast<PhysXEnvironment&>(m_physEnv);}
+
+void pragma::physics::PhysXVehicle::SetUseDigitalInputs(bool bUseDigitalInputs) {umath::set_flag(m_stateFlags,StateFlags::UseDigitalInputs,bUseDigitalInputs);}
+bool pragma::physics::PhysXVehicle::ShouldUseDigitalInputs() const {return umath::is_flag_set(m_stateFlags,StateFlags::UseDigitalInputs);}
+
+void pragma::physics::PhysXVehicle::SetBrakeFactor(float f)
+{
+	if(ShouldUseDigitalInputs())
+		m_inputData.setDigitalBrake(AnalogInputToDigital(f));
+	else
+		m_inputData.setAnalogBrake(f);
+}
+void pragma::physics::PhysXVehicle::SetHandbrakeFactor(float f)
+{
+	if(ShouldUseDigitalInputs())
+		m_inputData.setDigitalHandbrake(AnalogInputToDigital(f));
+	else
+		m_inputData.setAnalogHandbrake(f);
+}
+void pragma::physics::PhysXVehicle::SetAccelerationFactor(float f)
+{
+	if(ShouldUseDigitalInputs())
+		m_inputData.setDigitalAccel(AnalogInputToDigital(f));
+	else
+		m_inputData.setAnalogAccel(f);
+}
+void pragma::physics::PhysXVehicle::SetTurnFactor(float f)
+{
+	if(ShouldUseDigitalInputs())
+	{
+		if(f < 0.f)
+			m_inputData.setDigitalSteerLeft(AnalogInputToDigital(-f));
+		else
+			m_inputData.setDigitalSteerRight(AnalogInputToDigital(f));
+	}
+	else
+		m_inputData.setAnalogSteer(f);
+}
+
+void pragma::physics::PhysXVehicle::ResetControls()
+{
+	if(ShouldUseDigitalInputs())
+	{
+		m_inputData.setDigitalAccel(false);
+		m_inputData.setDigitalSteerLeft(false);
+		m_inputData.setDigitalSteerRight(false);
+		m_inputData.setDigitalBrake(false);
+		m_inputData.setDigitalHandbrake(false);
+	}
+	else
+	{
+		m_inputData.setAnalogAccel(0.0f);
+		m_inputData.setAnalogSteer(0.0f);
+		m_inputData.setAnalogBrake(0.0f);
+		m_inputData.setAnalogHandbrake(0.0f);
+	}
+}
+
+void pragma::physics::PhysXVehicle::SetGear(Gear gear)
+{
+	m_vehicle->mDriveDynData.forceGearChange(ToPhysXGear(gear));
+}
+void pragma::physics::PhysXVehicle::SetGearDown()
+{
+	m_inputData.setGearDown(true);
+}
+void pragma::physics::PhysXVehicle::SetGearUp()
+{
+	m_inputData.setGearUp(true);
+}
+void pragma::physics::PhysXVehicle::SetGearSwitchTime(float time)
+{
+	m_vehicle->mDriveDynData.setGearSwitchTime(time);
+}
+void pragma::physics::PhysXVehicle::ChangeToGear(Gear gear)
+{
+	m_vehicle->mDriveDynData.setTargetGear(ToPhysXGear(gear));
+}
+void pragma::physics::PhysXVehicle::SetUseAutoGears(bool useAutoGears)
+{
+	m_vehicle->mDriveDynData.setUseAutoGears(useAutoGears);
+}
+
+bool pragma::physics::PhysXVehicle::ShouldUseAutoGears() const
+{
+	return m_vehicle->mDriveDynData.getUseAutoGears();
+}
+pragma::physics::PhysXVehicle::Gear pragma::physics::PhysXVehicle::GetCurrentGear() const
+{
+	return FromPhysXGear(m_vehicle->mDriveDynData.getCurrentGear());
+}
+float pragma::physics::PhysXVehicle::GetEngineRotationSpeed() const
+{
+	return m_vehicle->mDriveDynData.getEngineRotationSpeed();
+}
+
+void pragma::physics::PhysXVehicle::SetRestState()
+{
+	m_vehicle->mDriveDynData.setToRestState();
+}
+
+void pragma::physics::PhysXVehicle::SetWheelRotationAngle(WheelIndex wheel,umath::Radian angle)
+{
+	m_vehicle->mWheelsDynData.setWheelRotationAngle(wheel,angle);
+}
+void pragma::physics::PhysXVehicle::SetWheelRotationSpeed(WheelIndex wheel,umath::Radian speed)
+{
+	m_vehicle->mWheelsDynData.setWheelRotationSpeed(wheel,speed);
+}
+
+bool pragma::physics::PhysXVehicle::IsInAir() const {return umath::is_flag_set(m_stateFlags,StateFlags::InAir);}
 
 ////////////////
 

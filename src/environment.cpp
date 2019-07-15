@@ -163,7 +163,7 @@ physx::PxFilterFlags VehicleFilterShader
 	PX_UNUSED(constantBlock);
 	PX_UNUSED(constantBlockSize);
 
-	if( (0 == (filterData0.word0 & filterData1.word1)) && (0 == (filterData1.word0 & filterData0.word1)) )
+	if( ((filterData0.word0 & filterData1.word1) == 0) && ((filterData1.word0 & filterData0.word1) == 0) )
 		return physx::PxFilterFlag::eSUPPRESS;
 
 	pairFlags = physx::PxPairFlag::eCONTACT_DEFAULT;

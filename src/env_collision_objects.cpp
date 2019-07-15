@@ -30,6 +30,7 @@ util::TSharedHandle<pragma::physics::ICollisionObject> pragma::physics::PhysXEnv
 	auto rigidBody = CreateSharedHandle<PhysXRigidStatic>(*this,std::move(rigidStaticPlane),*shape,0.f,Vector3{});
 	rigidBody->GetActorShapeCollection().AddShape(*shape,*pxShape);
 	InitializeCollisionObject(*rigidBody);
+	AddCollisionObject(*rigidBody);
 	return util::shared_handle_cast<PhysXRigidStatic,ICollisionObject>(rigidBody);
 }
 util::TSharedHandle<pragma::physics::ICollisionObject> pragma::physics::PhysXEnvironment::CreateCollisionObject(IShape &shape)

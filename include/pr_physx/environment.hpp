@@ -101,8 +101,7 @@ namespace pragma::physics
 		virtual util::TSharedHandle<IRigidBody> CreateRigidBody(float mass,IShape &shape,const Vector3 &localInertia,bool dynamic) override;
 		virtual util::TSharedHandle<ISoftBody> CreateSoftBody(const PhysSoftBodyInfo &info,float mass,const std::vector<Vector3> &verts,const std::vector<uint16_t> &indices,std::vector<uint16_t> &indexTranslations) override;
 		virtual util::TSharedHandle<IGhostObject> CreateGhostObject(IShape &shape) override;
-
-		util::TSharedHandle<ICollisionObject> CreatePlane(const Vector3 &n,float d,const IMaterial &mat);
+		virtual util::TSharedHandle<ICollisionObject> CreatePlane(const Vector3 &n,float d,const IMaterial &mat) override;
 
 		virtual std::shared_ptr<IConvexShape> CreateCapsuleShape(float halfWidth,float halfHeight,const IMaterial &mat) override;
 		virtual std::shared_ptr<IConvexShape> CreateBoxShape(const Vector3 &halfExtents,const IMaterial &mat) override;
@@ -114,7 +113,7 @@ namespace pragma::physics
 		virtual std::shared_ptr<IShape> CreateHeightfieldTerrainShape(uint32_t width,uint32_t length,Scalar maxHeight,uint32_t upAxis,const IMaterial &mat) override;
 		virtual std::shared_ptr<IMaterial> CreateMaterial(float staticFriction,float dynamicFriction,float restitution) override;
 
-		virtual util::TSharedHandle<IVehicle> CreateVehicle() override;
+		virtual util::TSharedHandle<IVehicle> CreateVehicle(const ChassisCreateInfo &chassisDesc,const std::vector<WheelCreateInfo> &wheelDescs) override;
 
 		physx::PxVehicleDrivableSurfaceToTireFrictionPairs &GetVehicleSurfaceTireFrictionPairs() const;
 		physx::PxScene &GetScene() const;
@@ -140,9 +139,6 @@ namespace pragma::physics
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxOverlapHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxSweepHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
 		void InitializeControllerDesc(physx::PxControllerDesc &inOutDesc,float halfHeight,float stepHeight,const Transform &startTransform);
-
-		physx::PxVehicleWheelData ToPxWheelData(const WheelCreateInfo &createInfo);
-		physx::PxVehicleTireData ToPxTireData(const TireCreateInfo &createInfo);
 
 		PhysXUniquePtr<physx::PxCooking> m_cooking = px_null_ptr<physx::PxCooking>();
 		PhysXUniquePtr<physx::PxScene> m_scene = px_null_ptr<physx::PxScene>();
