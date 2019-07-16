@@ -353,7 +353,7 @@ std::shared_ptr<pragma::physics::IMaterial> pragma::physics::PhysXEnvironment::C
 	return CreateSharedPtr<PhysXMaterial>(*this,std::move(pMat));
 }
 
-pragma::physics::IEnvironment::RemainingDeltaTime pragma::physics::PhysXEnvironment::StepSimulation(float timeStep,int maxSubSteps,float fixedTimeStep)
+pragma::physics::IEnvironment::RemainingDeltaTime pragma::physics::PhysXEnvironment::DoStepSimulation(float timeStep,int maxSubSteps,float fixedTimeStep)
 {
 	if(fixedTimeStep == 0.f)
 		return timeStep;

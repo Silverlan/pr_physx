@@ -35,9 +35,7 @@ physx::PxF32					gVehicleModeLifetime = 4.0f;
 physx::PxF32					gVehicleModeTimer = 0.0f;
 physx::PxU32					gVehicleOrderProgress = 0;
 bool					gVehicleOrderComplete = false;
-extern snippetvehicle::VehicleSceneQueryData*	gVehicleSceneQueryData;
-
-extern physx::PxVehicleDrivableSurfaceToTireFrictionPairs* gFrictionPairs;
+extern snippetvehicle::VehicleSceneQueryData	gVehicleSceneQueryData;
 
 
 // Source: PhysX vehicle demo samples
@@ -81,64 +79,29 @@ void pragma::physics::PhysXVehicle::Simulate(float dt)
 {
 	if(IsSpawned() == false)
 		return;
-	const physx::PxF32 timestep = dt;//1.0f/60.0f;
 	auto *gVehicle4W = static_cast<physx::PxVehicleDrive4W*>(m_vehicle.get());
 
 	//Update the control inputs for the vehicle.
 	if(ShouldUseDigitalInputs())
-		physx::PxVehicleDrive4WSmoothDigitalRawInputsAndSetAnalogInputs(gKeySmoothingData, gSteerVsForwardSpeedTable, m_inputData, timestep, IsInAir(), *gVehicle4W);
+		physx::PxVehicleDrive4WSmoothDigitalRawInputsAndSetAnalogInputs(gKeySmoothingData, gSteerVsForwardSpeedTable, m_inputData, dt, IsInAir(), *gVehicle4W);
 	else
-		physx::PxVehicleDrive4WSmoothAnalogRawInputsAndSetAnalogInputs(gPadSmoothingData, gSteerVsForwardSpeedTable, m_inputData, timestep, IsInAir(), *gVehicle4W);
+		physx::PxVehicleDrive4WSmoothAnalogRawInputsAndSetAnalogInputs(gPadSmoothingData, gSteerVsForwardSpeedTable, m_inputData, dt, IsInAir(), *gVehicle4W);
 
 	//Raycasts.
 	physx::PxVehicleWheels* vehicles[1] = {gVehicle4W};
-	physx::PxRaycastQueryResult* raycastResults = gVehicleSceneQueryData->getRaycastQueryResultBuffer(0);
-	const physx::PxU32 raycastResultsSize = gVehicleSceneQueryData->getQueryResultBufferSize();
+	physx::PxRaycastQueryResult* raycastResults = gVehicleSceneQueryData.getRaycastQueryResultBuffer(0);
+	const physx::PxU32 raycastResultsSize = gVehicleSceneQueryData.getQueryResultBufferSize();
 	physx::PxVehicleSuspensionRaycasts(m_raycastBatchQuery.get(), 1, vehicles, raycastResultsSize, raycastResults);
 
 	//Vehicle update.
 	const physx::PxVec3 grav = GetPxEnv().GetScene().getGravity();//ToPhysXVector(Vector3{0.f,-9.81f *40.f,0.f});//gScene->getGravity();
 	physx::PxWheelQueryResult wheelQueryResults[PX_MAX_NB_WHEELS];
 	physx::PxVehicleWheelQueryResult vehicleQueryResults[1] = {{wheelQueryResults, gVehicle4W->mWheelsSimData.getNbWheels()}};
-	PxVehicleUpdates(timestep, grav, *gFrictionPairs, 1, vehicles, vehicleQueryResults);
+	
+	PxVehicleUpdates(dt, grav,GetPxEnv().GetVehicleSurfaceTireFrictionPairs(), 1, vehicles, vehicleQueryResults);
 
 	//Work out if the vehicle is in the air.
 	umath::set_flag(m_stateFlags,StateFlags::InAir,gVehicle4W->getRigidDynamicActor()->isSleeping() ? false : PxVehicleIsInAir(vehicleQueryResults[0]));
-
-	/*std::array<physx::PxVehicleWheels*,1> vehicles = {m_vehicle.get()};
-	PxVehicleSuspensionRaycasts(m_raycastBatchQuery.get(),vehicles.size(),vehicles.data(),GetWheelCount(),m_raycastQueryResultPerWheel.data());
-
-	Vector3 gravity {};
-	auto *pColObj = GetCollisionObject();
-	if(pColObj != nullptr)
-		gravity = pColObj->GetGravity();
-
-	gravity = {0.f,-6'000.f,0.f}; // TODO
-
-	std::array<physx::PxVehicleWheelQueryResult,1> vehicleWheelQueryResults = {{m_wheelQueryResults.data(),m_wheelQueryResults.size()}};
-	physx::PxVehicleUpdates(dt,GetPxEnv().ToPhysXVector(gravity),GetPxEnv().GetVehicleSurfaceTireFrictionPairs(),vehicles.size(),vehicles.data(),vehicleWheelQueryResults.data());
-
-	
-	// Check
-	auto numInAir = 0;
-	auto avgTireFriction = 0.f;
-	auto &queryResult = vehicleWheelQueryResults.front();
-	for(auto i=decltype(queryResult.nbWheelQueryResults){0u};i<queryResult.nbWheelQueryResults;++i)
-	{
-		auto &result = queryResult.wheelQueryResults[i];
-		if(result.isInAir)
-			++numInAir;
-		avgTireFriction += result.tireFriction;
-	}
-	if(physx::PxVehicleIsInAir(vehicleWheelQueryResults.front()))
-		Con::cout<<"Vehicle is in the air!"<<Con::endl;
-	Con::cout<<"Tire Friction: "<<(avgTireFriction /static_cast<float>(m_wheelQueryResults.size()))<<Con::endl;
-	if(vehicleWheelQueryResults.front().wheelQueryResults->tireContactActor && vehicleWheelQueryResults.front().wheelQueryResults->tireContactActor->is<physx::PxRigidActor>())
-	{
-		auto *pCollisionObject = PhysXEnvironment::GetCollisionObject(*vehicleWheelQueryResults.front().wheelQueryResults->tireContactActor->is<physx::PxRigidActor>());
-		if(pCollisionObject)
-			Con::cout<<"HIT COLLISION OBJECT!"<<Con::endl;
-	}*/
 }
 void pragma::physics::PhysXVehicle::InitializeSceneBatchQuery(const snippetvehicle::VehicleSceneQueryData& vehicleSceneQueryData)
 {
@@ -147,12 +110,12 @@ void pragma::physics::PhysXVehicle::InitializeSceneBatchQuery(const snippetvehic
 
 	physx::PxBatchQueryDesc sqDesc(maxNumQueriesInBatch, maxNumQueriesInBatch, 0);
 
-	sqDesc.queryMemory.userRaycastResultBuffer = vehicleSceneQueryData.mRaycastResults + maxNumQueriesInBatch;
-	sqDesc.queryMemory.userRaycastTouchBuffer = vehicleSceneQueryData.mRaycastHitBuffer + maxNumHitResultsInBatch;
+	sqDesc.queryMemory.userRaycastResultBuffer = const_cast<physx::PxRaycastQueryResult*>(&vehicleSceneQueryData.mRaycastResults.at(maxNumQueriesInBatch));
+	sqDesc.queryMemory.userRaycastTouchBuffer = const_cast<physx::PxRaycastHit*>(&vehicleSceneQueryData.mRaycastHitBuffer.at(maxNumHitResultsInBatch));
 	sqDesc.queryMemory.raycastTouchBufferSize = maxNumHitResultsInBatch;
 
-	sqDesc.queryMemory.userSweepResultBuffer = vehicleSceneQueryData.mSweepResults + maxNumQueriesInBatch;
-	sqDesc.queryMemory.userSweepTouchBuffer = vehicleSceneQueryData.mSweepHitBuffer + maxNumHitResultsInBatch;
+	sqDesc.queryMemory.userSweepResultBuffer = const_cast<physx::PxSweepQueryResult*>(&vehicleSceneQueryData.mSweepResults.at(maxNumQueriesInBatch));
+	sqDesc.queryMemory.userSweepTouchBuffer = const_cast<physx::PxSweepHit*>(&vehicleSceneQueryData.mSweepHitBuffer.at(maxNumHitResultsInBatch));
 	sqDesc.queryMemory.sweepTouchBufferSize = maxNumHitResultsInBatch;
 
 	sqDesc.preFilterShader = vehicleSceneQueryData.mPreFilterShader;

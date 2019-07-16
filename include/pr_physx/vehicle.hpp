@@ -67,16 +67,13 @@ namespace snippetvehicle
 	class VehicleSceneQueryData
 	{
 	public:
-		VehicleSceneQueryData();
-		~VehicleSceneQueryData();
+		VehicleSceneQueryData()=default;
+		~VehicleSceneQueryData()=default;
 
 		//Allocate scene query data for up to maxNumVehicles and up to maxNumWheelsPerVehicle with numVehiclesInBatch per batch query.
-		static VehicleSceneQueryData* allocate
+		static VehicleSceneQueryData allocate
 		(const PxU32 maxNumVehicles, const PxU32 maxNumWheelsPerVehicle, const PxU32 maxNumHitPointsPerWheel, const PxU32 numVehiclesInBatch,
 			PxBatchQueryPreFilterShader preFilterShader, PxBatchQueryPostFilterShader postFilterShader);
-
-		//Free allocated buffers.
-		void free(PxAllocatorCallback& allocator);
 
 		//Create a PxBatchQuery instance that will be used for a single specified batch.
 		static PxBatchQuery* setUpBatchedSceneQuery(const PxU32 batchId, const VehicleSceneQueryData& vehicleSceneQueryData, PxScene* scene);
@@ -93,24 +90,24 @@ namespace snippetvehicle
 	public:
 
 		//Number of queries per batch
-		PxU32 mNumQueriesPerBatch;
+		PxU32 mNumQueriesPerBatch = 0;
 
 		//Number of hit results per query
-		PxU32 mNumHitResultsPerQuery;
+		PxU32 mNumHitResultsPerQuery = 0;
 
 		//One result for each wheel.
-		PxRaycastQueryResult* mRaycastResults;
-		PxSweepQueryResult* mSweepResults;
+		std::vector<PxRaycastQueryResult> mRaycastResults = {};
+		std::vector<PxSweepQueryResult> mSweepResults = {};
 
 		//One hit for each wheel.
-		PxRaycastHit* mRaycastHitBuffer;
-		PxSweepHit* mSweepHitBuffer;
+		std::vector<PxRaycastHit> mRaycastHitBuffer = {};
+		std::vector<PxSweepHit> mSweepHitBuffer = {};
 
 		//Filter shader used to filter drivable and non-drivable surfaces
-		PxBatchQueryPreFilterShader mPreFilterShader;
+		PxBatchQueryPreFilterShader mPreFilterShader = nullptr;
 
 		//Filter shader used to reject hit shapes that initially overlap sweeps.
-		PxBatchQueryPostFilterShader mPostFilterShader;
+		PxBatchQueryPostFilterShader mPostFilterShader = nullptr;
 
 	};
 

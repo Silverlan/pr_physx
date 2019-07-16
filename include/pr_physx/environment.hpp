@@ -113,12 +113,10 @@ namespace pragma::physics
 		virtual std::shared_ptr<IShape> CreateHeightfieldTerrainShape(uint32_t width,uint32_t length,Scalar maxHeight,uint32_t upAxis,const IMaterial &mat) override;
 		virtual std::shared_ptr<IMaterial> CreateMaterial(float staticFriction,float dynamicFriction,float restitution) override;
 
-		virtual util::TSharedHandle<IVehicle> CreateVehicle(const ChassisCreateInfo &chassisDesc,const std::vector<WheelCreateInfo> &wheelDescs) override;
+		virtual util::TSharedHandle<IVehicle> CreateVehicle(const VehicleCreateInfo &vhcDesc) override;
 
 		physx::PxVehicleDrivableSurfaceToTireFrictionPairs &GetVehicleSurfaceTireFrictionPairs() const;
 		physx::PxScene &GetScene() const;
-
-		virtual RemainingDeltaTime StepSimulation(float timeStep,int maxSubSteps=1,float fixedTimeStep=(1.f /60.f)) override;
 
 		virtual Bool Overlap(const TraceData &data,std::vector<TraceResult> *optOutResults=nullptr) const override;
 		virtual Bool RayCast(const TraceData &data,std::vector<TraceResult> *optOutResults=nullptr) const override;
@@ -139,6 +137,8 @@ namespace pragma::physics
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxOverlapHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxSweepHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
 		void InitializeControllerDesc(physx::PxControllerDesc &inOutDesc,float halfHeight,float stepHeight,const Transform &startTransform);
+		virtual RemainingDeltaTime DoStepSimulation(float timeStep,int maxSubSteps=1,float fixedTimeStep=(1.f /60.f)) override;
+		virtual void UpdateSurfaceTypes() override;
 
 		PhysXUniquePtr<physx::PxCooking> m_cooking = px_null_ptr<physx::PxCooking>();
 		PhysXUniquePtr<physx::PxScene> m_scene = px_null_ptr<physx::PxScene>();
