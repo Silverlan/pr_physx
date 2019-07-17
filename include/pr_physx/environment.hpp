@@ -3,6 +3,7 @@
 
 #include <pragma/physics/environment.hpp>
 #include <mathutil/uvec.h>
+#include <queue>
 #include "pr_physx/common.hpp"
 
 namespace physx
@@ -48,6 +49,8 @@ namespace pragma::physics
 	struct WheelCreateInfo;
 	struct TireCreateInfo;
 	struct ChassisCreateInfo;
+	using NoCollisionCategoryId = uint32_t;
+	struct NoCollisionCategory;
 	class PhysXEnvironment
 		: public pragma::physics::IEnvironment
 	{
@@ -63,6 +66,8 @@ namespace pragma::physics
 		static physx::PxFoundation &GetFoundation();
 		static physx::PxPhysics &GetPhysics();
 		static physx::PxPvd &GetPVD();
+
+		PhysXUniquePtr<NoCollisionCategory> GetUniqueNoCollisionCategory();
 
 		virtual bool Initialize() override;
 		virtual void OnRemove() override;
@@ -98,7 +103,7 @@ namespace pragma::physics
 		virtual util::TSharedHandle<IController> CreateCapsuleController(float halfWidth,float halfHeight,float stepHeight,umath::Degree slopeLimit=DEFAULT_CHARACTER_SLOPE_LIMIT,const Transform &startTransform={}) override;
 		virtual util::TSharedHandle<IController> CreateBoxController(const Vector3 &halfExtents,float stepHeight,umath::Degree slopeLimit=DEFAULT_CHARACTER_SLOPE_LIMIT,const Transform &startTransform={}) override;
 		virtual util::TSharedHandle<ICollisionObject> CreateCollisionObject(IShape &shape) override;
-		virtual util::TSharedHandle<IRigidBody> CreateRigidBody(float mass,IShape &shape,const Vector3 &localInertia,bool dynamic) override;
+		virtual util::TSharedHandle<IRigidBody> CreateRigidBody(IShape &shape,bool dynamic) override;
 		virtual util::TSharedHandle<ISoftBody> CreateSoftBody(const PhysSoftBodyInfo &info,float mass,const std::vector<Vector3> &verts,const std::vector<uint16_t> &indices,std::vector<uint16_t> &indexTranslations) override;
 		virtual util::TSharedHandle<IGhostObject> CreateGhostObject(IShape &shape) override;
 		virtual util::TSharedHandle<ICollisionObject> CreatePlane(const Vector3 &n,float d,const IMaterial &mat) override;
@@ -130,6 +135,7 @@ namespace pragma::physics
 		friend PhysXTriangleShape;
 		friend PhysXConvexHullShape;
 		friend PhysXActorShapeCollection;
+
 		util::TSharedHandle<IController> CreateController(PhysXUniquePtr<physx::PxController> controller);
 		void InitializeShape(PhysXActorShape &shape,bool basicOnly=false) const;
 		void InitializeCollisionObject(PhysXCollisionObject &o);
@@ -150,8 +156,30 @@ namespace pragma::physics
 		std::unique_ptr<CustomUserControllerHitReport> m_controllerHitReport = nullptr;
 		std::unique_ptr<physx::PxSimulationEventCallback> m_simEventCallback = nullptr;
 		std::unique_ptr<PhysXSimulationFilterCallback> m_simFilterCallback = nullptr;
+
+		NoCollisionCategoryId m_nextNoCollisionCategoryId = 1;
+		std::queue<NoCollisionCategoryId> m_freeNoCollisionCategories = {};
+	};
+
+	struct NoCollisionCategory
+	{
+		NoCollisionCategory(PhysXEnvironment &physEnv,NoCollisionCategoryId category)
+			: physEnv{physEnv},m_category{category}
+		{}
+		PhysXEnvironment &physEnv;
+		operator NoCollisionCategoryId() const {return m_category;}
+	private:
+		NoCollisionCategoryId m_category;
 	};
 };
+
+// Note: This mustn't be a function, see PhysX shaders for more
+// information
+#define PX_FILTER_SHOULD_PASS(filterData0,filterData1) \
+	(( \
+		((filterData0.word0 & filterData1.word1) != 0 || (filterData1.word0 & filterData0.word1) != 0) && \
+		(filterData0.word3 == 0 || filterData0.word3 != filterData1.word3) \
+	) ? true : false)
 
 template<class T,typename... TARGS>
 	pragma::physics::PhysXUniquePtr<T> pragma::physics::PhysXEnvironment::CreateUniquePtr(TARGS&& ...args)

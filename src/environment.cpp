@@ -163,7 +163,7 @@ physx::PxFilterFlags VehicleFilterShader
 	PX_UNUSED(constantBlock);
 	PX_UNUSED(constantBlockSize);
 
-	if( ((filterData0.word0 & filterData1.word1) == 0) && ((filterData1.word0 & filterData0.word1) == 0) )
+	if(PX_FILTER_SHOULD_PASS(filterData0,filterData1) == false)
 		return physx::PxFilterFlag::eSUPPRESS;
 
 	pairFlags = physx::PxPairFlag::eCONTACT_DEFAULT;
@@ -222,6 +222,7 @@ bool pragma::physics::PhysXEnvironment::Initialize()
 	physx::PxSceneDesc sceneDesc {scale};
 	sceneDesc.gravity = {0.f,-9.81f *40.f,0.f};//{0.f,0.f,0.f};
 	sceneDesc.simulationEventCallback = m_simEventCallback.get();
+	// TODO
 	//sceneDesc.filterShader = physx::PxDefaultSimulationFilterShader;
 	//sceneDesc.filterCallback = m_simFilterCallback.get();
 	sceneDesc.filterShader	= VehicleFilterShader;
@@ -265,6 +266,22 @@ bool pragma::physics::PhysXEnvironment::Initialize()
 	m_controllerBehaviorCallback = std::make_unique<CustomControllerBehaviorCallback>();
 	m_controllerHitReport = std::make_unique<CustomUserControllerHitReport>();
 	return IEnvironment::Initialize();
+}
+pragma::physics::PhysXUniquePtr<pragma::physics::NoCollisionCategory> pragma::physics::PhysXEnvironment::GetUniqueNoCollisionCategory()
+{
+	NoCollisionCategoryId catId;
+	if(m_freeNoCollisionCategories.empty() == false)
+	{
+		catId = m_freeNoCollisionCategories.front();
+		m_freeNoCollisionCategories.pop();
+	}
+	else
+		catId = m_nextNoCollisionCategoryId++;
+	PhysXUniquePtr<NoCollisionCategory> cat {new NoCollisionCategory{*this,catId},[](NoCollisionCategory *cat) {
+		cat->physEnv.m_freeNoCollisionCategories.push(static_cast<NoCollisionCategoryId>(*cat));
+		delete cat;
+	}};
+	return cat;
 }
 void pragma::physics::PhysXEnvironment::StartProfiling() {}
 void pragma::physics::PhysXEnvironment::EndProfiling() {}

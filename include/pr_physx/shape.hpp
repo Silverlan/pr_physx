@@ -35,13 +35,19 @@ namespace pragma::physics
 		virtual void ApplySurfaceMaterial(IMaterial &mat) override;
 		IMaterial *GetMaterial() const;
 
+		virtual void SetMass(float mass) override;
+		virtual float GetMass() const override;
+
 		virtual bool IsValid() const override;
 		PhysXEnvironment &GetPxEnv() const;
 	protected:
 		PhysXShape(IEnvironment &env,const std::shared_ptr<physx::PxGeometry> &geometry);
+		void UpdateBounds();
 		std::shared_ptr<physx::PxGeometry> m_geometry = nullptr;
 		physx::PxGeometryHolder m_geometryHolder = {};
 		std::shared_ptr<IMaterial> m_material = nullptr;
+		std::pair<Vector3,Vector3> m_bounds = {};
+		float m_mass = 0.f;
 	};
 
 	class PhysXConvexShape
@@ -109,8 +115,11 @@ namespace pragma::physics
 	public:
 		friend IEnvironment;
 		virtual bool IsValid() const override;
+		virtual void SetMass(float mass) override;
+		virtual float GetMass() const override;
 	protected:
 		PhysXCompoundShape(IEnvironment &env);
+
 	};
 
 	class IMaterial;

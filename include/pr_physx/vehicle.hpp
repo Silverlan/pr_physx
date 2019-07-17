@@ -3,13 +3,9 @@
 
 #include "pr_physx/common.hpp"
 #include <pragma/physics/vehicle.hpp>
+#include <vector>
 
 // TODO
-enum
-{
-	DRIVABLE_SURFACE = 64,
-	UNDRIVABLE_SURFACE = 32
-};
 
 enum
 {
@@ -19,102 +15,68 @@ enum
 	COLLISION_FLAG_OBSTACLE			=	1 << 3,
 	COLLISION_FLAG_DRIVABLE_OBSTACLE=	1 << 4,
 
-	COLLISION_FLAG_GROUND_AGAINST	=															COLLISION_FLAG_CHASSIS | COLLISION_FLAG_OBSTACLE | COLLISION_FLAG_DRIVABLE_OBSTACLE,
-	COLLISION_FLAG_WHEEL_AGAINST	=									COLLISION_FLAG_WHEEL |	COLLISION_FLAG_CHASSIS | COLLISION_FLAG_OBSTACLE,
+	COLLISION_FLAG_GROUND_AGAINST	=														COLLISION_FLAG_GROUND |	COLLISION_FLAG_CHASSIS | COLLISION_FLAG_OBSTACLE | COLLISION_FLAG_DRIVABLE_OBSTACLE,
+	// WHEEL MUSTNT COLLIDE WITH WHEEL // COLLISION_FLAG_WHEEL
+	COLLISION_FLAG_WHEEL_AGAINST	=									COLLISION_FLAG_CHASSIS | COLLISION_FLAG_OBSTACLE,
 	COLLISION_FLAG_CHASSIS_AGAINST	=			COLLISION_FLAG_GROUND | COLLISION_FLAG_WHEEL |	COLLISION_FLAG_CHASSIS | COLLISION_FLAG_OBSTACLE | COLLISION_FLAG_DRIVABLE_OBSTACLE,
 	COLLISION_FLAG_OBSTACLE_AGAINST	=			COLLISION_FLAG_GROUND | COLLISION_FLAG_WHEEL |	COLLISION_FLAG_CHASSIS | COLLISION_FLAG_OBSTACLE | COLLISION_FLAG_DRIVABLE_OBSTACLE,
 	COLLISION_FLAG_DRIVABLE_OBSTACLE_AGAINST=	COLLISION_FLAG_GROUND 						 |	COLLISION_FLAG_CHASSIS | COLLISION_FLAG_OBSTACLE | COLLISION_FLAG_DRIVABLE_OBSTACLE,
 };
 
-namespace snippetvehicle
+namespace pragma::physics
 {
-
-	using namespace physx;
-
-	enum
-	{
-		DRIVABLE_SURFACE = 0xffff0000,
-		UNDRIVABLE_SURFACE = 0x0000ffff
-	};
-
-	void setupDrivableSurface(PxFilterData& filterData);
-
-	void setupNonDrivableSurface(PxFilterData& filterData);
-
-
-	PxQueryHitType::Enum WheelSceneQueryPreFilterBlocking
-	(PxFilterData filterData0, PxFilterData filterData1,
-		const void* constantBlock, PxU32 constantBlockSize,
-		PxHitFlags& queryFlags);
-
-	PxQueryHitType::Enum WheelSceneQueryPostFilterBlocking
-	(PxFilterData queryFilterData, PxFilterData objectFilterData,
-		const void* constantBlock, PxU32 constantBlockSize,
-		const PxQueryHit& hit);
-
-	PxQueryHitType::Enum WheelSceneQueryPreFilterNonBlocking
-	(PxFilterData filterData0, PxFilterData filterData1,
-		const void* constantBlock, PxU32 constantBlockSize,
-		PxHitFlags& queryFlags);
-
-	PxQueryHitType::Enum WheelSceneQueryPostFilterNonBlocking
-	(PxFilterData queryFilterData, PxFilterData objectFilterData,
-		const void* constantBlock, PxU32 constantBlockSize,
-		const PxQueryHit& hit);
-
-
-	//Data structure for quick setup of scene queries for suspension queries.
+	class PhysXEnvironment;
 	class VehicleSceneQueryData
 	{
 	public:
-		VehicleSceneQueryData()=default;
+		VehicleSceneQueryData(uint32_t numQueriesInBatch);
 		~VehicleSceneQueryData()=default;
 
 		//Allocate scene query data for up to maxNumVehicles and up to maxNumWheelsPerVehicle with numVehiclesInBatch per batch query.
-		static VehicleSceneQueryData allocate
-		(const PxU32 maxNumVehicles, const PxU32 maxNumWheelsPerVehicle, const PxU32 maxNumHitPointsPerWheel, const PxU32 numVehiclesInBatch,
-			PxBatchQueryPreFilterShader preFilterShader, PxBatchQueryPostFilterShader postFilterShader);
+		static std::unique_ptr<VehicleSceneQueryData> Create(pragma::physics::PhysXEnvironment &env,uint32_t numWheels,physx::PxBatchQueryPreFilterShader preFilterShader,physx::PxBatchQueryPostFilterShader postFilterShader);
 
-		//Create a PxBatchQuery instance that will be used for a single specified batch.
-		static PxBatchQuery* setUpBatchedSceneQuery(const PxU32 batchId, const VehicleSceneQueryData& vehicleSceneQueryData, PxScene* scene);
+		const std::vector<physx::PxRaycastQueryResult> &GetRaycastResults() const;
+		std::vector<physx::PxRaycastQueryResult> &GetRaycastResults();
+		const std::vector<physx::PxSweepQueryResult> &GetSweepResults() const;
+		std::vector<physx::PxSweepQueryResult> &GetSweepResults();
+		const std::vector<physx::PxRaycastHit> &GetRaycastHits() const;
+		std::vector<physx::PxRaycastHit> &GetRaycastHits();
+		const std::vector<physx::PxSweepHit> &GetSweepHits() const;
+		std::vector<physx::PxSweepHit> &GetSweepHits();
 
-		//Return an array of scene query results for a single specified batch.
-		PxRaycastQueryResult* getRaycastQueryResultBuffer(const PxU32 batchId); 
+		physx::PxBatchQuery &GetBatchQuery();
 
-		//Return an array of scene query results for a single specified batch.
-		PxSweepQueryResult* getSweepQueryResultBuffer(const PxU32 batchId); 
+		const physx::PxBatchQueryPreFilterShader &GetPreFilterShader() const;
+		const physx::PxBatchQueryPostFilterShader &GetPostFilterShader() const;
 
-		//Get the number of scene query results that have been allocated for a single batch.
-		PxU32 getQueryResultBufferSize() const; 
-
-	public:
+		physx::PxU32 GetNumQueriesPerBatch() const;
+		physx::PxU32 GetNumHitResultsPerQuery() const;
+	private:
 
 		//Number of queries per batch
-		PxU32 mNumQueriesPerBatch = 0;
+		physx::PxU32 m_numQueriesPerBatch = 0;
 
 		//Number of hit results per query
-		PxU32 mNumHitResultsPerQuery = 0;
+		physx::PxU32 m_numHitResultsPerQuery = 0;
 
 		//One result for each wheel.
-		std::vector<PxRaycastQueryResult> mRaycastResults = {};
-		std::vector<PxSweepQueryResult> mSweepResults = {};
+		std::vector<physx::PxRaycastQueryResult> m_raycastResults = {};
+		std::vector<physx::PxSweepQueryResult> m_sweepResults = {};
 
 		//One hit for each wheel.
-		std::vector<PxRaycastHit> mRaycastHitBuffer = {};
-		std::vector<PxSweepHit> mSweepHitBuffer = {};
+		std::vector<physx::PxRaycastHit> m_raycastHitBuffer = {};
+		std::vector<physx::PxSweepHit> m_sweepHitBuffer = {};
 
 		//Filter shader used to filter drivable and non-drivable surfaces
-		PxBatchQueryPreFilterShader mPreFilterShader = nullptr;
+		physx::PxBatchQueryPreFilterShader m_preFilterShader = nullptr;
 
 		//Filter shader used to reject hit shapes that initially overlap sweeps.
-		PxBatchQueryPostFilterShader mPostFilterShader = nullptr;
+		physx::PxBatchQueryPostFilterShader m_postFilterShader = nullptr;
 
+		physx::PxBatchQueryDesc m_batchQueryDesc;
+		pragma::physics::PhysXUniquePtr<physx::PxBatchQuery> m_batchQuery = pragma::physics::px_null_ptr<physx::PxBatchQuery>();
 	};
 
-} // namespace snippetvehicle
-
-namespace pragma::physics
-{
 	class ICollisionObject;
 	class PhysXEnvironment;
 	class PhysXQueryFilterCallback;
@@ -172,7 +134,7 @@ namespace pragma::physics
 	private:
 		PhysXVehicle(
 			IEnvironment &env,PhysXUniquePtr<physx::PxVehicleDrive> vhc,const util::TSharedHandle<ICollisionObject> &collisionObject,
-			PhysXUniquePtr<physx::PxBatchQuery> raycastBatchQuery
+			std::unique_ptr<pragma::physics::VehicleSceneQueryData> vhcSceneQueryData,const physx::PxFixedSizeLookupTable<8> &steerVsForwardSpeedTable
 		);
 		static constexpr bool AnalogInputToDigital(float fAnalog);
 		static constexpr physx::PxU32 ToPhysXGear(Gear gear);
@@ -182,17 +144,14 @@ namespace pragma::physics
 		virtual void DoAddWorldObject() override;
 		virtual void DoSpawn() override;
 
-		void InitializeSceneBatchQuery(const snippetvehicle::VehicleSceneQueryData& vehicleSceneQueryData);
-
 		void Simulate(float dt);
 		PhysXUniquePtr<physx::PxVehicleDrive> m_vehicle = px_null_ptr<physx::PxVehicleDrive>();
-		PhysXUniquePtr<physx::PxBatchQuery> m_raycastBatchQuery = px_null_ptr<physx::PxBatchQuery>();
 		StateFlags m_stateFlags = StateFlags::None;
 		physx::PxVehicleDrive4WRawInputData m_inputData = {};
 
-		std::vector<physx::PxRaycastQueryResult> m_raycastQueryResultPerWheel;
 		std::vector<physx::PxWheelQueryResult> m_wheelQueryResults;
-		std::vector<physx::PxRaycastHit> m_raycastHitPerWheel;
+		std::unique_ptr<pragma::physics::VehicleSceneQueryData> m_vehicleSceneQuery = nullptr;
+		physx::PxFixedSizeLookupTable<8> m_steerVsForwardSpeedTable;
 	};
 
 	class PhysXWheel

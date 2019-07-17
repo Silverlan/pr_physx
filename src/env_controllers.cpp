@@ -54,7 +54,7 @@ util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironm
 	// Actor will automatically be removed by controller
 	auto rigidDynamic = std::unique_ptr<physx::PxActor,void(*)(physx::PxActor*)>{pActor,[](physx::PxActor*) {}};
 	auto *pRigidDynamic = static_cast<physx::PxRigidDynamic*>(rigidDynamic.get());
-	auto rigidBody = CreateSharedHandle<PhysXRigidDynamic>(*this,std::move(rigidDynamic),*shape,pRigidDynamic->getMass(),FromPhysXVector(pRigidDynamic->getMassSpaceInertiaTensor()));
+	auto rigidBody = CreateSharedHandle<PhysXRigidDynamic>(*this,std::move(rigidDynamic),*shape);
 	rigidBody->GetActorShapeCollection().AddShape(*shape,internalShape);
 	InitializeCollisionObject(*rigidBody);
 

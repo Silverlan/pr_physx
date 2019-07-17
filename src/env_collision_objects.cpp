@@ -27,7 +27,7 @@ util::TSharedHandle<pragma::physics::ICollisionObject> pragma::physics::PhysXEnv
 	if(geometryPtr == nullptr)
 		return nullptr;
 	auto shape = CreateSharedPtr<PhysXConvexShape>(*this,geometryPtr);
-	auto rigidBody = CreateSharedHandle<PhysXRigidStatic>(*this,std::move(rigidStaticPlane),*shape,0.f,Vector3{});
+	auto rigidBody = CreateSharedHandle<PhysXRigidStatic>(*this,std::move(rigidStaticPlane),*shape);
 	rigidBody->GetActorShapeCollection().AddShape(*shape,*pxShape);
 	InitializeCollisionObject(*rigidBody);
 	AddCollisionObject(*rigidBody);
@@ -37,7 +37,7 @@ util::TSharedHandle<pragma::physics::ICollisionObject> pragma::physics::PhysXEnv
 {
 	return nullptr;
 }
-util::TSharedHandle<pragma::physics::IRigidBody> pragma::physics::PhysXEnvironment::CreateRigidBody(float mass,IShape &shape,const Vector3 &localInertia,bool dynamic)
+util::TSharedHandle<pragma::physics::IRigidBody> pragma::physics::PhysXEnvironment::CreateRigidBody(IShape &shape,bool dynamic)
 {
 	if(shape.IsValid() == false)
 		return nullptr;
@@ -48,23 +48,17 @@ util::TSharedHandle<pragma::physics::IRigidBody> pragma::physics::PhysXEnvironme
 	);
 	if(rigidObj == nullptr)
 		return nullptr;
+	if(dynamic)
+		static_cast<physx::PxRigidDynamic*>(rigidObj.get())->setMass(shape.GetMass());
 	auto *pRigidObj = static_cast<physx::PxRigidActor*>(rigidObj.get());
-	auto rigidBody = dynamic ? util::shared_handle_cast<PhysXRigidDynamic,PhysXRigidBody>(CreateSharedHandle<PhysXRigidDynamic>(*this,std::move(rigidObj),shape,mass,localInertia)) :
-		util::shared_handle_cast<PhysXRigidStatic,PhysXRigidBody>(CreateSharedHandle<PhysXRigidStatic>(*this,std::move(rigidObj),shape,mass,localInertia));
+	auto rigidBody = dynamic ? util::shared_handle_cast<PhysXRigidDynamic,PhysXRigidBody>(CreateSharedHandle<PhysXRigidDynamic>(*this,std::move(rigidObj),shape)) :
+		util::shared_handle_cast<PhysXRigidStatic,PhysXRigidBody>(CreateSharedHandle<PhysXRigidStatic>(*this,std::move(rigidObj),shape));
 	if(dynamic && (shape.IsTriangleShape() || shape.IsHeightfield())) // Dynamic rigid bodies with triangle or height field shape HAVE to be kinematic
 		static_cast<physx::PxRigidDynamic*>(pRigidObj)->setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC,true);
 	rigidBody->SetCollisionShape(&shape);
 
-	// TODO
-	/*physx::PxFilterData filterData;
-	filterData.word0 = 1; // Group // word0 = own ID
-	filterData.word1 = 0; // Mask  // word1 = ID mask to filter pairs that trigger a
-	filterData.word2 = 0;
-	filterData.word3 = 64; // TODO: Drivable surface
-	PhysXShape::GetShape(shape).GetInternalObject().setSimulationFilterData(filterData);*/
-
 	if(dynamic)
-		physx::PxRigidBodyExt::setMassAndUpdateInertia(*static_cast<physx::PxRigidDynamic*>(pRigidObj),mass);
+		physx::PxRigidBodyExt::setMassAndUpdateInertia(*static_cast<physx::PxRigidDynamic*>(pRigidObj),shape.GetMass());
 	InitializeCollisionObject(*rigidBody);
 	AddCollisionObject(*rigidBody);
 	return util::shared_handle_cast<PhysXRigidBody,IRigidBody>(rigidBody);

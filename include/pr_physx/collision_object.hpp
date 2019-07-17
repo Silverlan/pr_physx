@@ -15,6 +15,8 @@ namespace pragma::physics
 	class PhysXEnvironment;
 	class PhysXActorShape;
 
+	struct NoCollisionCategory;
+	using NoCollisionCategoryId = uint32_t;
 	class PhysXMaterial;
 	class PhysXShape;
 	class PhysXCollisionObject;
@@ -60,6 +62,7 @@ namespace pragma::physics
 		PhysXCollisionObject(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape);
 		PhysXEnvironment &GetPxEnv() const;
 		physx::PxActor &GetInternalObject() const;
+		NoCollisionCategoryId DisableSelfCollisions();
 		virtual void GetAABB(Vector3 &min,Vector3 &max) const override;
 		virtual void SetSleepReportEnabled(bool reportEnabled) override;
 		virtual bool IsSleepReportEnabled() const override;
@@ -77,6 +80,7 @@ namespace pragma::physics
 		virtual void RemoveWorldObject() override;
 		virtual void DoAddWorldObject() override;
 		mutable PhysXActorShapeCollection m_actorShapeCollection;
+		PhysXUniquePtr<NoCollisionCategory> m_noCollisionCategory = px_null_ptr<NoCollisionCategory>();
 	private:
 		PhysXUniquePtr<physx::PxActor> m_actor = px_null_ptr<physx::PxActor>();
 	};
@@ -103,6 +107,9 @@ namespace pragma::physics
 		virtual void SetCollisionsEnabled(bool enabled) override;
 		//
 
+		virtual void SetCenterOfMassOffset(const Vector3 &offset) override;
+		virtual Vector3 GetCenterOfMassOffset() const override;
+
 		virtual void SetMassProps(float mass,const Vector3 &inertia) override;
 		virtual Vector3 &GetInertia() override;
 		virtual Mat3 GetInvInertiaTensorWorld() const override;
@@ -111,7 +118,7 @@ namespace pragma::physics
 		void SetController(PhysXController &controller);
 		PhysXController *GetController() const;
 	protected:
-		PhysXRigidBody(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia);
+		PhysXRigidBody(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape);
 		virtual void ApplyCollisionShape(pragma::physics::IShape *optShape) override;
 		virtual void RemoveWorldObject() override;
 		virtual void DoAddWorldObject() override;
@@ -168,10 +175,13 @@ namespace pragma::physics
 		virtual float GetLinearSleepingThreshold() const override;
 		virtual float GetAngularSleepingThreshold() const override;
 
+		virtual void SetCenterOfMassOffset(const Vector3 &offset) override;
+		virtual Vector3 GetCenterOfMassOffset() const override;
+
 		virtual void SetKinematic(bool bKinematic) override;
 		virtual bool IsKinematic() const override;
 	protected:
-		PhysXRigidDynamic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia);
+		PhysXRigidDynamic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape);
 	private:
 		virtual void ApplyCollisionShape(pragma::physics::IShape *optShape) override;
 	};
@@ -222,7 +232,7 @@ namespace pragma::physics
 		virtual void SetKinematic(bool bKinematic) override;
 		virtual bool IsKinematic() const override;
 	protected:
-		PhysXRigidStatic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia);
+		PhysXRigidStatic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape);
 	};
 	class PhysXSoftBody
 		: virtual public pragma::physics::ISoftBody,

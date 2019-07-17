@@ -4,6 +4,7 @@
 #include "pr_physx/vehicle.hpp"
 #include "pr_physx/collision_object.hpp"
 #include "pr_physx/common.hpp"
+#include "pr_physx/query_filter_callback.hpp"
 #include <pragma/math/surfacematerial.h>
 #include <PxShape.h>
 #include <common/PxCoreUtilityTypes.h>
@@ -19,7 +20,10 @@ pragma::physics::PhysXShape::PhysXShape(IEnvironment &env,const std::shared_ptr<
 {
 	SetUserData(this);
 	if(geometry)
+	{
 		m_geometryHolder = {*geometry};
+		UpdateBounds();
+	}
 }
 const physx::PxGeometryHolder &pragma::physics::PhysXShape::GetInternalObject() const {return m_geometryHolder;}
 physx::PxGeometryHolder &pragma::physics::PhysXShape::GetInternalObject() {return m_geometryHolder;}
@@ -29,35 +33,99 @@ void pragma::physics::PhysXShape::CalculateLocalInertia(float mass,Vector3 *loca
 }
 void pragma::physics::PhysXShape::GetAABB(Vector3 &min,Vector3 &max) const
 {
-	switch(m_geometry->getType())
+	min = m_bounds.first;
+	max = m_bounds.second;
+}
+void pragma::physics::PhysXShape::UpdateBounds()
+{
+	Vector3 min,max;
+	auto type = m_geometry->getType();
+	switch(type)
 	{
 	case physx::PxGeometryType::eBOX:
-		{
-			auto &box = m_geometryHolder.box();
-			auto extents = GetPxEnv().FromPhysXVector(box.halfExtents);
-			min = -extents;
-			max = extents;
-			break;
-		}
-	case physx::PxGeometryType::eSPHERE:
-		{
-			auto &sphere = m_geometryHolder.sphere();
-			auto extents = Vector3{sphere.radius,sphere.radius,sphere.radius};
-			min = -extents;
-			max = extents;
-			break;
-		}
+	{
+		auto &box = m_geometryHolder.box();
+		auto extents = GetPxEnv().FromPhysXVector(box.halfExtents);
+		min = -extents;
+		max = extents;
+		break;
 	}
-	// TODO
-/*
-enum Enum
-{
-ePLANE,
-eCAPSULE,
-eCONVEXMESH,
-eTRIANGLEMESH,
-eHEIGHTFIELD,
-*/
+	case physx::PxGeometryType::eSPHERE:
+	{
+		auto &sphere = m_geometryHolder.sphere();
+		auto extents = Vector3{sphere.radius,sphere.radius,sphere.radius};
+		min = -extents;
+		max = extents;
+		break;
+	}
+	case physx::PxGeometryType::eCAPSULE:
+	{
+		auto &capsule = m_geometryHolder.capsule();
+		auto extents = Vector3{capsule.radius,capsule.halfHeight,capsule.radius};
+		min = -extents;
+		max = extents;
+		break;
+	}
+	case physx::PxGeometryType::eCONVEXMESH:
+	case physx::PxGeometryType::eTRIANGLEMESH:
+	{
+		const physx::PxVec3 *verts;
+		physx::PxU32 numVerts;
+		if(type == physx::PxGeometryType::eCONVEXMESH)
+		{
+			auto &convexMesh = m_geometryHolder.convexMesh();
+			verts = convexMesh.convexMesh->getVertices();
+			numVerts = convexMesh.convexMesh->getNbVertices();
+		}
+		else
+		{
+			auto &triMesh = m_geometryHolder.triangleMesh();
+			verts = triMesh.triangleMesh->getVertices();
+			numVerts = triMesh.triangleMesh->getNbVertices();
+		}
+		if(numVerts == 0)
+		{
+			min = {};
+			max = {};
+			break;
+		}
+		min = Vector3{std::numeric_limits<float>::max(),std::numeric_limits<float>::max(),std::numeric_limits<float>::max()};
+		max = Vector3{std::numeric_limits<float>::lowest(),std::numeric_limits<float>::lowest(),std::numeric_limits<float>::lowest()};
+		for(auto i=decltype(numVerts){0u};i<numVerts;++i)
+		{
+			auto &v = reinterpret_cast<const Vector3&>(verts[i]);
+			static_assert(sizeof(v) == sizeof(Vector3));
+			uvec::min(&min,v);
+			uvec::max(&max,v);
+		}
+		break;
+	}
+	case physx::PxGeometryType::eHEIGHTFIELD:
+	{
+		// TODO
+		Con::cwar<<"WARNING: Attempted to update AABB for heightfield, which is not yet implemented!"<<Con::endl;
+		min = {};
+		max = {};
+		break;
+	}
+	case physx::PxGeometryType::ePLANE:
+	{
+		// TODO
+		Con::cwar<<"WARNING: Attempted to update AABB for plane, which is not yet implemented!"<<Con::endl;
+		min = {};
+		max = {};
+		break;
+	}
+	default:
+	{
+		// TODO
+		Con::cwar<<"WARNING: Attempted to update AABB for unknown shape type!"<<Con::endl;
+		min = {};
+		max = {};
+		break;
+	}
+	}
+	m_bounds = {min,max};
 }
 void pragma::physics::PhysXShape::GetBoundingSphere(Vector3 &outCenter,float &outRadius) const
 {
@@ -65,6 +133,8 @@ void pragma::physics::PhysXShape::GetBoundingSphere(Vector3 &outCenter,float &ou
 }
 void pragma::physics::PhysXShape::ApplySurfaceMaterial(IMaterial &mat) {}
 pragma::physics::IMaterial *pragma::physics::PhysXShape::GetMaterial() const {return m_material.get();}
+void pragma::physics::PhysXShape::SetMass(float mass) {m_mass = mass;}
+float pragma::physics::PhysXShape::GetMass() const {return m_mass;}
 bool pragma::physics::PhysXShape::IsValid() const {return IShape::IsValid() && m_geometry != nullptr;}
 pragma::physics::PhysXEnvironment &pragma::physics::PhysXShape::GetPxEnv() const {return static_cast<PhysXEnvironment&>(m_physEnv);}
 
@@ -152,6 +222,7 @@ void pragma::physics::PhysXConvexHullShape::DoBuild()
 		[](physx::PxGeometry *p) {delete p;}
 	);
 	m_geometryHolder = {*m_geometry};
+	UpdateBounds();
 }
 void pragma::physics::PhysXConvexHullShape::AddTriangle(uint32_t idx0,uint32_t idx1,uint32_t idx2)
 {
@@ -205,6 +276,8 @@ bool pragma::physics::PhysXCompoundShape::IsValid() const
 		return shapeInfo.shape->IsValid() == false;
 	}) == shapes.end();
 }
+void pragma::physics::PhysXCompoundShape::SetMass(float mass) {ICompoundShape::SetMass(mass);}
+float pragma::physics::PhysXCompoundShape::GetMass() const {return ICompoundShape::GetMass();}
 
 //////////////
 
@@ -272,6 +345,7 @@ void pragma::physics::PhysXTriangleShape::DoBuild(const std::vector<SurfaceMater
 		[](physx::PxGeometry *p) {delete p;}
 	);
 	m_geometryHolder = {*m_geometry};
+	UpdateBounds();
 }
 
 ///////////////
@@ -340,9 +414,9 @@ pragma::physics::PhysXActorShape *pragma::physics::PhysXActorShapeCollection::Ad
 	// Vehicle test
 	physx::PxFilterData groundPlaneSimFilterData(COLLISION_FLAG_GROUND, COLLISION_FLAG_GROUND_AGAINST, 0, 0);
 	//Set the query filter data of the ground plane so that the vehicle raycasts can hit the ground.
-	physx::PxFilterData qryFilterData;
+	physx::PxFilterData qryFilterData(COLLISION_FLAG_GROUND, COLLISION_FLAG_GROUND_AGAINST, 0, 0);
 	// drivable surface
-	qryFilterData.word3 = static_cast<physx::PxU32>(snippetvehicle::DRIVABLE_SURFACE);
+	//qryFilterData.word3 = static_cast<physx::PxU32>(DRIVABLE_SURFACE);
 	pxActorShape.setQueryFilterData(qryFilterData);
 
 	//Set the simulation filter data of the ground plane so that it collides with the chassis of a vehicle but not the wheels.

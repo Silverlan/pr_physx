@@ -34,6 +34,17 @@ namespace pragma::physics
 	private:
 		ICollisionObject &m_collisionObject;
 	};
+
+	enum
+	{
+		DRIVABLE_SURFACE = 64,
+		UNDRIVABLE_SURFACE = 32
+	};
+
+	physx::PxQueryHitType::Enum BatchQueryPreFilterBlocking(
+		physx::PxFilterData filterData0,physx::PxFilterData filterData1,
+		const void *constantBlock,physx::PxU32 constantBlockSize,physx::PxHitFlags &queryFlags
+	);
 };
 
 #endif

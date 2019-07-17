@@ -51,6 +51,24 @@ void pragma::physics::PhysXCollisionObject::SetLocalPose(const Transform &t)
 	m_actorShapeCollection.SetLocalPose(t);
 }
 pragma::physics::Transform pragma::physics::PhysXCollisionObject::GetLocalPose() const {return m_actorShapeCollection.GetLocalPose();}
+pragma::physics::NoCollisionCategoryId pragma::physics::PhysXCollisionObject::DisableSelfCollisions()
+{
+	if(m_noCollisionCategory == nullptr)
+		m_noCollisionCategory = GetPxEnv().GetUniqueNoCollisionCategory();
+	for(auto &actorShape : m_actorShapeCollection.GetActorShapes())
+	{
+		auto &pxActorShape = actorShape->GetActorShape();
+
+		auto queryFilterData = pxActorShape.getQueryFilterData();
+		queryFilterData.word3 = *m_noCollisionCategory;
+		pxActorShape.setQueryFilterData(queryFilterData);
+
+		auto simFilterData = pxActorShape.getSimulationFilterData();
+		simFilterData.word3 = *m_noCollisionCategory;
+		pxActorShape.setSimulationFilterData(simFilterData);
+	}
+	return *m_noCollisionCategory;
+}
 pragma::physics::PhysXActorShapeCollection &pragma::physics::PhysXCollisionObject::GetActorShapeCollection() const {return m_actorShapeCollection;}
 void pragma::physics::PhysXCollisionObject::RemoveWorldObject()
 {
@@ -66,8 +84,8 @@ void pragma::physics::PhysXCollisionObject::DoAddWorldObject()
 
 //////////////////
 
-pragma::physics::PhysXRigidBody::PhysXRigidBody(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia)
-	: PhysXCollisionObject{env,std::move(actor),shape},IRigidBody{env,mass,shape,localInertia},ICollisionObject{env,shape}
+pragma::physics::PhysXRigidBody::PhysXRigidBody(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape)
+	: PhysXCollisionObject{env,std::move(actor),shape},IRigidBody{env,shape},ICollisionObject{env,shape}
 {}
 physx::PxRigidActor &pragma::physics::PhysXRigidBody::GetInternalObject() const {return static_cast<physx::PxRigidDynamic&>(PhysXCollisionObject::GetInternalObject());}
 
@@ -187,34 +205,73 @@ void pragma::physics::PhysXRigidBody::ApplyCollisionShape(pragma::physics::IShap
 		if(mat == nullptr)
 			mat = &GetPxEnv().GetGenericMaterial();
 		m_actorShapeCollection.AttachShapeToActor(PhysXShape::GetShape(*optShape),PhysXMaterial::GetMaterial(*mat));
-		return;
 	}
-	auto &compoundShape = static_cast<PhysXCompoundShape&>(PhysXShape::GetShape(*optShape));
-	auto &subShapes = compoundShape.GetShapes();
-	std::vector<physx::PxShape*> pxShapes {};
-	pxShapes.reserve(subShapes.size());
-	for(auto i=decltype(subShapes.size()){0u};i<subShapes.size();++i)
+	else
 	{
-		auto &shapeInfo = subShapes.at(i);
-		if(shapeInfo.shape->IsCompoundShape() == true)
-			continue; // Compound shapes of compound shapes currently not supported
-		auto *mat = PhysXShape::GetShape(*shapeInfo.shape).GetMaterial();
-		if(mat == nullptr)
+		auto &compoundShape = static_cast<PhysXCompoundShape&>(PhysXShape::GetShape(*optShape));
+		auto &subShapes = compoundShape.GetShapes();
+		std::vector<physx::PxShape*> pxShapes {};
+		pxShapes.reserve(subShapes.size());
+		for(auto i=decltype(subShapes.size()){0u};i<subShapes.size();++i)
 		{
-			mat = compoundShape.GetMaterial();
+			auto &shapeInfo = subShapes.at(i);
+			if(shapeInfo.shape->IsCompoundShape() == true)
+				continue; // Compound shapes of compound shapes currently not supported
+			auto *mat = PhysXShape::GetShape(*shapeInfo.shape).GetMaterial();
 			if(mat == nullptr)
-				mat = &GetPxEnv().GetGenericMaterial();
+			{
+				mat = compoundShape.GetMaterial();
+				if(mat == nullptr)
+					mat = &GetPxEnv().GetGenericMaterial();
+			}
+			m_actorShapeCollection.AttachShapeToActor(PhysXShape::GetShape(*shapeInfo.shape),PhysXMaterial::GetMaterial(*mat));
 		}
-		m_actorShapeCollection.AttachShapeToActor(PhysXShape::GetShape(*shapeInfo.shape),PhysXMaterial::GetMaterial(*mat));
 	}
+
+	// We need to re-apply our collision group and mask
+	SetCollisionFilterGroup(GetCollisionFilterGroup());
+	SetCollisionFilterMask(GetCollisionFilterMask());
+	if(m_noCollisionCategory)
+		DisableSelfCollisions();
 }
 void pragma::physics::PhysXRigidBody::DoSetCollisionFilterGroup(CollisionMask group)
 {
-	// TODO
+	for(auto &actorShape : GetActorShapeCollection().GetActorShapes())
+	{
+		auto &pxActorShape = actorShape->GetActorShape();
+
+		auto queryFilterData = pxActorShape.getQueryFilterData();
+		queryFilterData.word0 = umath::to_integral(group);
+		pxActorShape.setQueryFilterData(queryFilterData);
+
+		auto simFilterData = pxActorShape.getSimulationFilterData();
+		simFilterData.word0 = umath::to_integral(group);
+		pxActorShape.setSimulationFilterData(simFilterData);
+	}
 }
 void pragma::physics::PhysXRigidBody::DoSetCollisionFilterMask(CollisionMask mask)
 {
+	for(auto &actorShape : GetActorShapeCollection().GetActorShapes())
+	{
+		auto &pxActorShape = actorShape->GetActorShape();
+
+		auto queryFilterData = pxActorShape.getQueryFilterData();
+		queryFilterData.word1 = umath::to_integral(mask);
+		pxActorShape.setQueryFilterData(queryFilterData);
+
+		auto simFilterData = pxActorShape.getSimulationFilterData();
+		simFilterData.word1 = umath::to_integral(mask);
+		pxActorShape.setSimulationFilterData(simFilterData);
+	}
+}
+void pragma::physics::PhysXRigidBody::SetCenterOfMassOffset(const Vector3 &offset)
+{
 	// TODO
+}
+Vector3 pragma::physics::PhysXRigidBody::GetCenterOfMassOffset() const
+{
+	// TODO
+	return Vector3{};
 }
 void pragma::physics::PhysXRigidBody::SetMassProps(float mass,const Vector3 &inertia)
 {
@@ -245,8 +302,8 @@ pragma::physics::PhysXController *pragma::physics::PhysXRigidBody::GetController
 
 //////////////////
 
-pragma::physics::PhysXRigidDynamic::PhysXRigidDynamic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia)
-	: PhysXRigidBody{env,std::move(actor),shape,mass,localInertia},ICollisionObject{env,shape},IRigidBody{env,mass,shape,localInertia}
+pragma::physics::PhysXRigidDynamic::PhysXRigidDynamic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape)
+	: PhysXRigidBody{env,std::move(actor),shape},ICollisionObject{env,shape},IRigidBody{env,shape}
 {}
 physx::PxRigidDynamic &pragma::physics::PhysXRigidDynamic::GetInternalObject() const {return static_cast<physx::PxRigidDynamic&>(PhysXRigidBody::GetInternalObject());}
 void pragma::physics::PhysXRigidDynamic::SetActivationState(ActivationState state)
@@ -391,6 +448,17 @@ float pragma::physics::PhysXRigidDynamic::GetAngularSleepingThreshold() const
 {
 	return GetInternalObject().getSleepThreshold();
 }
+void pragma::physics::PhysXRigidDynamic::SetCenterOfMassOffset(const Vector3 &offset)
+{
+	auto pose = GetInternalObject().getCMassLocalPose();
+	pose.p = GetPxEnv().ToPhysXVector(offset);
+	GetInternalObject().setCMassLocalPose(pose);
+}
+Vector3 pragma::physics::PhysXRigidDynamic::GetCenterOfMassOffset() const
+{
+	auto pose = GetInternalObject().getCMassLocalPose();
+	return GetPxEnv().FromPhysXVector(pose.p);
+}
 void pragma::physics::PhysXRigidDynamic::SetKinematic(bool bKinematic)
 {
 	GetInternalObject().setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC,bKinematic);
@@ -438,8 +506,8 @@ void pragma::physics::PhysXRigidDynamic::ApplyCollisionShape(pragma::physics::IS
 
 //////////////////
 
-pragma::physics::PhysXRigidStatic::PhysXRigidStatic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape,float mass,const Vector3 &localInertia)
-	: PhysXRigidBody{env,std::move(actor),shape,mass,localInertia},ICollisionObject{env,shape},IRigidBody{env,mass,shape,localInertia}
+pragma::physics::PhysXRigidStatic::PhysXRigidStatic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape)
+	: PhysXRigidBody{env,std::move(actor),shape},ICollisionObject{env,shape},IRigidBody{env,shape}
 {}
 physx::PxRigidStatic &pragma::physics::PhysXRigidStatic::GetInternalObject() const {return static_cast<physx::PxRigidStatic&>(PhysXRigidBody::GetInternalObject());}
 void pragma::physics::PhysXRigidStatic::SetActivationState(ActivationState state) {}
