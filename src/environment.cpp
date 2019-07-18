@@ -201,7 +201,7 @@ bool pragma::physics::PhysXEnvironment::Initialize()
 
 	physx::PxTolerancesScale scale;
 	scale.length = util::metres_to_units(1);
-	scale.speed = 10.0f * 40.f;//600.f;
+	scale.speed = 600.f;
 	if(g_pxPhysics == nullptr)
 	{
 		g_pxPhysics = px_create_unique_ptr(PxCreatePhysics(PX_PHYSICS_VERSION,*g_pxFoundation,scale,bEnableDebugging,g_pxPvd.get()));
@@ -220,9 +220,8 @@ bool pragma::physics::PhysXEnvironment::Initialize()
 	m_simEventCallback = std::make_unique<PhysXSimulationEventCallback>();
 	m_simFilterCallback = std::make_unique<PhysXSimulationFilterCallback>();
 	physx::PxSceneDesc sceneDesc {scale};
-	sceneDesc.gravity = {0.f,-9.81f *40.f,0.f};//{0.f,0.f,0.f};
+	sceneDesc.gravity = {0.f,0.f,0.f};
 	sceneDesc.simulationEventCallback = m_simEventCallback.get();
-	// TODO
 	//sceneDesc.filterShader = physx::PxDefaultSimulationFilterShader;
 	//sceneDesc.filterCallback = m_simFilterCallback.get();
 	sceneDesc.filterShader	= VehicleFilterShader;
@@ -252,7 +251,6 @@ bool pragma::physics::PhysXEnvironment::Initialize()
 	m_scene = px_create_unique_ptr(g_pxPhysics->createScene(sceneDesc));
 	if(m_scene == nullptr)
 		return false;
-	m_scene->setGravity({0.f,-9.81f *40.f,0.f});//{0.f,0.f,0.f});
 	m_cooking = px_create_unique_ptr(PxCreateCooking(PX_PHYSICS_VERSION,*g_pxFoundation,physx::PxCookingParams(scale)));
 	if(m_cooking == nullptr)
 		return false;

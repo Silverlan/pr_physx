@@ -410,18 +410,6 @@ pragma::physics::PhysXActorShape *pragma::physics::PhysXActorShapeCollection::Ad
 	auto actorShape = std::unique_ptr<PhysXActorShape>{new PhysXActorShape{shape.GetPxEnv(),pxActorShape,shape}};
 	shape.GetPxEnv().InitializeShape(*actorShape,applyPose);
 
-	// TODO
-	// Vehicle test
-	physx::PxFilterData groundPlaneSimFilterData(COLLISION_FLAG_GROUND, COLLISION_FLAG_GROUND_AGAINST, 0, 0);
-	//Set the query filter data of the ground plane so that the vehicle raycasts can hit the ground.
-	physx::PxFilterData qryFilterData(COLLISION_FLAG_GROUND, COLLISION_FLAG_GROUND_AGAINST, 0, 0);
-	// drivable surface
-	//qryFilterData.word3 = static_cast<physx::PxU32>(DRIVABLE_SURFACE);
-	pxActorShape.setQueryFilterData(qryFilterData);
-
-	//Set the simulation filter data of the ground plane so that it collides with the chassis of a vehicle but not the wheels.
-	pxActorShape.setSimulationFilterData(groundPlaneSimFilterData);
-	//
 	m_actorShapes.push_back(std::move(actorShape));
 	return m_actorShapes.back().get();
 }

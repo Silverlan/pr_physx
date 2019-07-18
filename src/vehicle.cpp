@@ -4,6 +4,7 @@
 #include "pr_physx/query_filter_callback.hpp"
 #include <vehicle/PxVehicleUtil.h>
 
+#pragma optimize("",off)
 pragma::physics::PhysXVehicle &pragma::physics::PhysXVehicle::GetVehicle(IVehicle &c)
 {
 	return *static_cast<PhysXVehicle*>(c.GetUserData());
@@ -25,6 +26,9 @@ void pragma::physics::PhysXVehicle::Simulate(float dt)
 	if(IsSpawned() == false)
 		return;
 	auto *vhc4w = static_cast<physx::PxVehicleDrive4W*>(m_vehicle.get());
+	auto *actor = vhc4w->getRigidDynamicActor();
+	if(actor == nullptr)
+		return;
 
 	// Source: PhysX vehicle demo samples
 	static constexpr physx::PxVehicleKeySmoothingData keySmoothingData =
@@ -72,10 +76,13 @@ void pragma::physics::PhysXVehicle::Simulate(float dt)
 	auto &raycastResults = m_vehicleSceneQuery->GetRaycastResults();
 	physx::PxVehicleSuspensionRaycasts(&m_vehicleSceneQuery->GetBatchQuery(),vehicles.size(),vehicles.data(),raycastResults.size(),raycastResults.data());
 
-	auto grav = GetPxEnv().GetScene().getGravity(); // TODO
+	physx::PxVec3 gravity {};
+	if(actor)
+		gravity = GetPxEnv().ToPhysXVector(PhysXEnvironment::GetCollisionObject(*actor)->GetGravity());
+	if(gravity.magnitudeSquared() == 0.f)
+		gravity = {0.f,-0.0001f,0.f}; // Zero gravity is not allowed by PhysX
 	std::array<physx::PxVehicleWheelQueryResult,1> vehicleQueryResults = {{m_wheelQueryResults.data(),m_wheelQueryResults.size()}};
-	
-	PxVehicleUpdates(dt,grav,GetPxEnv().GetVehicleSurfaceTireFrictionPairs(),vehicles.size(),vehicles.data(),vehicleQueryResults.data());
+	PxVehicleUpdates(dt,gravity,GetPxEnv().GetVehicleSurfaceTireFrictionPairs(),vehicles.size(),vehicles.data(),vehicleQueryResults.data());
 
 	//Work out if the vehicle is in the air.
 	umath::set_flag(m_stateFlags,StateFlags::InAir,vhc4w->getRigidDynamicActor()->isSleeping() ? false : PxVehicleIsInAir(vehicleQueryResults.front()));
@@ -241,3 +248,4 @@ void pragma::physics::PhysXWheel::Initialize()
 	//GetInternalObject().userData = this;
 }
 pragma::physics::PhysXEnvironment &pragma::physics::PhysXWheel::GetPxEnv() const {return static_cast<PhysXEnvironment&>(m_physEnv);}
+#pragma optimize("",on)

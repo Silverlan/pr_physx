@@ -411,16 +411,8 @@ util::TSharedHandle<pragma::physics::IVehicle> pragma::physics::PhysXEnvironment
 		if(shapeIndex < 0 || shapeIndex >= actorShapes.size())
 			continue;
 		auto &actorShape = actorShapes.at(shapeIndex)->GetActorShape();
-		actorShape.setQueryFilterData(physx::PxFilterData{umath::to_integral(CollisionMask::Vehicle),0,0,colCategory});
-		actorShape.setSimulationFilterData({umath::to_integral(CollisionMask::Vehicle),0,0,colCategory});
-	}
-
-	// Chassis
-	if(vhcDesc.chassis.shapeIndex >= 0 && vhcDesc.chassis.shapeIndex < actorShapes.size())
-	{
-		auto &actorShape = actorShapes.at(vhcDesc.chassis.shapeIndex)->GetActorShape();
-		actorShape.setQueryFilterData(physx::PxFilterData{umath::to_integral(CollisionMask::Vehicle),umath::to_integral(CollisionMask::All),0,colCategory});
-		actorShape.setSimulationFilterData({umath::to_integral(CollisionMask::Vehicle),umath::to_integral(CollisionMask::All),0,colCategory});
+		// Disable simulation collision for the wheel
+		actorShape.setSimulationFilterData({umath::to_integral(CollisionMask::NoCollision),0,0,colCategory});
 	}
 
 	//Create the batched scene queries for the suspension raycasts.
