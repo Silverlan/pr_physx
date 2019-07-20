@@ -29,7 +29,7 @@ namespace pragma::physics
 		PhysXActorShapeCollection(PhysXCollisionObject &colObj);
 		const std::vector<std::unique_ptr<PhysXActorShape>> &GetActorShapes() const;
 
-		PhysXActorShape *AttachShapeToActor(PhysXShape &shape,PhysXMaterial &mat);
+		PhysXActorShape *AttachShapeToActor(PhysXShape &shape,PhysXMaterial &mat,const physics::Transform &localPose={});
 		// Adds the shape to the shape list, but does not attach it to the
 		// actor. Assumes that it already has been attached to it!
 		PhysXActorShape *AddShape(PhysXShape &shape,physx::PxShape &actorShape);
@@ -39,8 +39,7 @@ namespace pragma::physics
 
 		void ApplySurfaceMaterial(PhysXMaterial &mat);
 
-		void SetLocalPose(const Transform &t);
-		Transform GetLocalPose() const;
+		void TransformLocalPose(const Transform &t);
 		void CalcMassProps(float mass,Vector3 &centerOfMass);
 	private:
 		void Clear();
@@ -70,8 +69,7 @@ namespace pragma::physics
 		virtual void SetTrigger(bool bTrigger) override;
 		virtual bool IsTrigger() const override;
 
-		virtual void SetLocalPose(const Transform &t) override;
-		virtual Transform GetLocalPose() const override;
+		virtual void TransformLocalPose(const Transform &t) override;
 
 		PhysXActorShapeCollection &GetActorShapeCollection() const;
 	protected:

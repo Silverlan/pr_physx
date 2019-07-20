@@ -24,9 +24,12 @@ physx::PxQueryHitType::Enum pragma::physics::RayCastFilterCallback::Filter(const
 	auto *colObj = m_env.GetCollisionObject(*actor);
 	if(colObj->IsRigid() == false)
 		return physx::PxQueryHitType::eNONE;
+	auto *rigidBody = m_env.GetCollisionObject(*actor)->GetRigidBody();
+	if(rigidBody == nullptr)
+		return physx::PxQueryHitType::eNONE;
 	auto hitType = (m_rayCastFilterCallback.*filter)(
 		m_env.GetShape(*shape)->GetShape(),
-		*m_env.GetCollisionObject(*actor)->GetRigidBody()
+		*rigidBody
 		);
 	switch(hitType)
 	{

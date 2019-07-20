@@ -46,11 +46,10 @@ bool pragma::physics::PhysXCollisionObject::IsSleepReportEnabled() const
 void pragma::physics::PhysXCollisionObject::SetTrigger(bool bTrigger) {m_actorShapeCollection.SetTrigger(bTrigger);}
 bool pragma::physics::PhysXCollisionObject::IsTrigger() const {return m_actorShapeCollection.IsTrigger();}
 
-void pragma::physics::PhysXCollisionObject::SetLocalPose(const Transform &t)
+void pragma::physics::PhysXCollisionObject::TransformLocalPose(const Transform &t)
 {
-	m_actorShapeCollection.SetLocalPose(t);
+	m_actorShapeCollection.TransformLocalPose(t);
 }
-pragma::physics::Transform pragma::physics::PhysXCollisionObject::GetLocalPose() const {return m_actorShapeCollection.GetLocalPose();}
 pragma::physics::NoCollisionCategoryId pragma::physics::PhysXCollisionObject::DisableSelfCollisions()
 {
 	if(m_noCollisionCategory == nullptr)
@@ -212,6 +211,7 @@ void pragma::physics::PhysXRigidBody::ApplyCollisionShape(pragma::physics::IShap
 		auto &subShapes = compoundShape.GetShapes();
 		std::vector<physx::PxShape*> pxShapes {};
 		pxShapes.reserve(subShapes.size());
+		auto parentPose = compoundShape.GetLocalPose();
 		for(auto i=decltype(subShapes.size()){0u};i<subShapes.size();++i)
 		{
 			auto &shapeInfo = subShapes.at(i);
@@ -224,7 +224,7 @@ void pragma::physics::PhysXRigidBody::ApplyCollisionShape(pragma::physics::IShap
 				if(mat == nullptr)
 					mat = &GetPxEnv().GetGenericMaterial();
 			}
-			m_actorShapeCollection.AttachShapeToActor(PhysXShape::GetShape(*shapeInfo.shape),PhysXMaterial::GetMaterial(*mat));
+			m_actorShapeCollection.AttachShapeToActor(PhysXShape::GetShape(*shapeInfo.shape),PhysXMaterial::GetMaterial(*mat),parentPose *shapeInfo.localPose);
 		}
 	}
 

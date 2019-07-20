@@ -108,6 +108,7 @@ namespace pragma::physics
 
 		virtual bool IsInAir() const override;
 
+		virtual std::optional<physics::Transform> GetLocalWheelPose(uint32_t wheelIndex) const override;
 		virtual uint32_t GetWheelCount() const override;
 		virtual float GetForwardSpeed() const override;
 		virtual float GetSidewaysSpeed() const override;
@@ -116,7 +117,8 @@ namespace pragma::physics
 	private:
 		PhysXVehicle(
 			IEnvironment &env,PhysXUniquePtr<physx::PxVehicleDrive> vhc,const util::TSharedHandle<ICollisionObject> &collisionObject,
-			std::unique_ptr<pragma::physics::VehicleSceneQueryData> vhcSceneQueryData,const physx::PxFixedSizeLookupTable<8> &steerVsForwardSpeedTable
+			std::unique_ptr<pragma::physics::VehicleSceneQueryData> vhcSceneQueryData,const physx::PxFixedSizeLookupTable<8> &steerVsForwardSpeedTable,
+			const VehicleCreateInfo &createInfo
 		);
 		static constexpr bool AnalogInputToDigital(float fAnalog);
 		static constexpr physx::PxU32 ToPhysXGear(Gear gear);
@@ -130,6 +132,7 @@ namespace pragma::physics
 		PhysXUniquePtr<physx::PxVehicleDrive> m_vehicle = px_null_ptr<physx::PxVehicleDrive>();
 		StateFlags m_stateFlags = StateFlags::None;
 		physx::PxVehicleDrive4WRawInputData m_inputData = {};
+		VehicleCreateInfo m_createInfo = {};
 
 		std::vector<physx::PxWheelQueryResult> m_wheelQueryResults;
 		std::unique_ptr<pragma::physics::VehicleSceneQueryData> m_vehicleSceneQuery = nullptr;

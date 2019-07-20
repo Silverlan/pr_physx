@@ -28,6 +28,9 @@ namespace pragma::physics
 		const physx::PxGeometryHolder &GetInternalObject() const;
 		physx::PxGeometryHolder &GetInternalObject();
 
+		virtual void SetLocalPose(const physics::Transform &localPose) override;
+		virtual physics::Transform GetLocalPose() const override;
+
 		virtual void CalculateLocalInertia(float mass,Vector3 *localInertia) const override;
 		virtual void GetAABB(Vector3 &min,Vector3 &max) const override;
 		virtual void GetBoundingSphere(Vector3 &outCenter,float &outRadius) const override;
@@ -47,6 +50,7 @@ namespace pragma::physics
 		physx::PxGeometryHolder m_geometryHolder = {};
 		std::shared_ptr<IMaterial> m_material = nullptr;
 		std::pair<Vector3,Vector3> m_bounds = {};
+		physics::Transform m_localPose = {};
 		float m_mass = 0.f;
 	};
 

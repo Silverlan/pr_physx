@@ -1,6 +1,7 @@
 #include "pr_physx/vehicle.hpp"
 #include "pr_physx/environment.hpp"
 #include "pr_physx/collision_object.hpp"
+#include "pr_physx/shape.hpp"
 #include "pr_physx/query_filter_callback.hpp"
 #include <vehicle/PxVehicleUtil.h>
 
@@ -9,13 +10,14 @@ pragma::physics::PhysXVehicle &pragma::physics::PhysXVehicle::GetVehicle(IVehicl
 {
 	return *static_cast<PhysXVehicle*>(c.GetUserData());
 }
-const pragma::physics::PhysXVehicle &GetVehicle(const pragma::physics::IVehicle &v) {return GetVehicle(const_cast<pragma::physics::IVehicle&>(v));}
+const pragma::physics::PhysXVehicle &pragma::physics::PhysXVehicle::GetVehicle(const pragma::physics::IVehicle &v) {return GetVehicle(const_cast<pragma::physics::IVehicle&>(v));}
 pragma::physics::PhysXVehicle::PhysXVehicle(
 	IEnvironment &env,PhysXUniquePtr<physx::PxVehicleDrive> vhc,const util::TSharedHandle<ICollisionObject> &collisionObject,
-	std::unique_ptr<pragma::physics::VehicleSceneQueryData> vhcSceneQueryData,const physx::PxFixedSizeLookupTable<8> &steerVsForwardSpeedTable
+	std::unique_ptr<pragma::physics::VehicleSceneQueryData> vhcSceneQueryData,const physx::PxFixedSizeLookupTable<8> &steerVsForwardSpeedTable,
+	const VehicleCreateInfo &createInfo
 )
 	: IVehicle{env,collisionObject},m_vehicle{std::move(vhc)},m_vehicleSceneQuery{std::move(vhcSceneQueryData)},
-	m_steerVsForwardSpeedTable{steerVsForwardSpeedTable}
+	m_steerVsForwardSpeedTable{steerVsForwardSpeedTable},m_createInfo{createInfo}
 {
 	SetUserData(this);
 }
@@ -29,7 +31,6 @@ void pragma::physics::PhysXVehicle::Simulate(float dt)
 	auto *actor = vhc4w->getRigidDynamicActor();
 	if(actor == nullptr)
 		return;
-
 	// Source: PhysX vehicle demo samples
 	static constexpr physx::PxVehicleKeySmoothingData keySmoothingData =
 	{
@@ -92,6 +93,18 @@ void pragma::physics::PhysXVehicle::Initialize()
 	IVehicle::Initialize();
 	auto numWheels = GetWheelCount();
 	m_wheelQueryResults.resize(numWheels);
+}
+std::optional<pragma::physics::Transform> pragma::physics::PhysXVehicle::GetLocalWheelPose(uint32_t wheelIndex) const
+{
+	auto *colObj = GetCollisionObject();
+	if(colObj == nullptr || wheelIndex >= m_createInfo.wheels.size())
+		return {};
+	auto &wheelCreateInfo = m_createInfo.wheels.at(wheelIndex);
+	auto &physXColObj = PhysXCollisionObject::GetCollisionObject(*colObj);
+	auto &actorShapes = physXColObj.GetActorShapeCollection().GetActorShapes();
+	if(wheelCreateInfo.shapeIndex < 0 || wheelCreateInfo.shapeIndex >= actorShapes.size())
+		return {};
+	return actorShapes.at(wheelCreateInfo.shapeIndex)->GetLocalPose();
 }
 uint32_t pragma::physics::PhysXVehicle::GetWheelCount() const {return 4;}
 float pragma::physics::PhysXVehicle::GetForwardSpeed() const

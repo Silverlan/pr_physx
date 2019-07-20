@@ -189,7 +189,9 @@ static void setupWheelsSimulationData(
 			auto &actorShape = actorShapes.at(createInfo.shapeIndex);
 			wheel.data.mMass = actorShape->GetShape().GetMass();
 		}
+#ifndef VHC_RELEASE_MODE
 		wheel.data.mMOI = createInfo.GetMomentOfInertia(*vhcCreateInfo.actor) /umath::pow2(scale);
+#endif
 
 		wheel.data.mRadius = createInfo.radius /scale;
 		wheel.data.mWidth = createInfo.width /scale;
@@ -298,11 +300,17 @@ static pragma::physics::PhysXUniquePtr<physx::PxVehicleDrive> createVehicle4W(
 	//Construct a physx actor with shapes for the chassis and wheels.
 	//Set the rigid body mass, moment of inertia, and center of mass offset.
 	auto cmOffset = env.ToPhysXVector(vhcCreateInfo.actor->GetCenterOfMassOffset()) /scale;
+#ifndef VHC_RELEASE_MODE
+	// Note: center of mass offset is OUTSIDE AABB bounds? Is this okay?
+	// Check how center of mass is calculated!
+#endif
 	util::TSharedHandle<pragma::physics::PhysXRigidBody> veh4WActor = nullptr;
 	{
 		//Rigid body data.
 		physx::PxVehicleChassisData rigidBodyData;
+#ifndef VHC_RELEASE_MODE
 		rigidBodyData.mMOI = env.ToPhysXVector(vhcCreateInfo.chassis.GetMomentOfInertia(*vhcCreateInfo.actor)) /umath::pow2(scale);
+#endif
 		rigidBodyData.mCMOffset = cmOffset;
 
 		veh4WActor = createVehicleActor(rigidBodyData,vhcCreateInfo);
@@ -318,10 +326,11 @@ static pragma::physics::PhysXUniquePtr<physx::PxVehicleDrive> createVehicle4W(
 
 	auto mass = 0.f;
 	auto &actorShapes = pragma::physics::PhysXCollisionObject::GetCollisionObject(*vhcCreateInfo.actor).GetActorShapeCollection().GetActorShapes();
-	if(vhcCreateInfo.chassis.shapeIndex >= 0 && vhcCreateInfo.chassis.shapeIndex < actorShapes.size())
+	for(auto shapeIndex : vhcCreateInfo.chassis.shapeIndices)
 	{
-		auto &actorShape = actorShapes.at(vhcCreateInfo.chassis.shapeIndex);
-		mass = actorShape->GetShape().GetMass();
+		if(shapeIndex < 0 || shapeIndex >= actorShapes.size())
+			continue;
+		mass += actorShapes.at(shapeIndex)->GetShape().GetMass();
 	}
 	// The mass of the actor has to match the mass of the chassis,
 	// we'll just enforce that here
@@ -405,6 +414,28 @@ util::TSharedHandle<pragma::physics::IVehicle> pragma::physics::PhysXEnvironment
 	auto colCategory = pragma::physics::PhysXCollisionObject::GetCollisionObject(*vhcDesc.actor).DisableSelfCollisions();
 
 	auto &actorShapes = pragma::physics::PhysXCollisionObject::GetCollisionObject(*vhcDesc.actor).GetActorShapeCollection().GetActorShapes();
+
+#ifndef VHC_RELEASE_MODE
+	{
+		auto &rigidDynamic = static_cast<physx::PxRigidDynamic&>(pragma::physics::PhysXCollisionObject::GetCollisionObject(*vhcDesc.actor).GetInternalObject());
+
+		auto mass = rigidDynamic.getMass();
+		auto msit = rigidDynamic.getMassSpaceInertiaTensor();
+		auto massOffset = rigidDynamic.getCMassLocalPose();
+		Con::cout<<"Mass: "<<mass<<Con::endl;
+		Con::cout<<"Mass space inertia tensor: "<<msit.x<<","<<msit.y<<","<<msit.z<<Con::endl;
+		Con::cout<<"Mass center offset: "<<massOffset.p.x<<","<<massOffset.p.y<<","<<massOffset.p.z<<Con::endl;
+
+		//rigidDynamic.setMass(1740);
+		//rigidDynamic.setMassSpaceInertiaTensor({6.46766e+06,6.96396e+06,2.28965e+06});
+		//rigidDynamic.setCMassLocalPose({0.f,-14.f,10.f});
+
+	//vhcDesc.actor->setMassSpaceInertiaTensor({906.249939,781.250000,320.312500});
+	//rigidDynamic.getMass();
+	//rigidDynamic.getCMassLocalPose();
+	}
+#endif
+
 	for(auto &wheel : vhcDesc.wheels)
 	{
 		auto shapeIndex = wheel.shapeIndex;
@@ -424,6 +455,8 @@ util::TSharedHandle<pragma::physics::IVehicle> pragma::physics::PhysXEnvironment
 	util::TSharedHandle<pragma::physics::PhysXRigidBody> rigidBody;
 	auto gVehicle = createVehicle4W(*this,vhcDesc,rigidBody,colCategory);
 	auto *gVehicle4W = static_cast<physx::PxVehicleDrive4W*>(gVehicle.get());
+	if(gVehicle4W->getRigidDynamicActor() == nullptr)
+		return nullptr; // Can occur if vehicle is mis-configured (check checked PhysX build)
 
 	//Convert the vehicle from meters to the chosen length scale.
 	constexpr auto scale = util::metres_to_units(1.f);
@@ -444,7 +477,7 @@ util::TSharedHandle<pragma::physics::IVehicle> pragma::physics::PhysXEnvironment
 
 	auto vhc = CreateSharedHandle<PhysXVehicle>(
 		*this,std::move(gVehicle),util::shared_handle_cast<PhysXRigidBody,ICollisionObject>(rigidBody),
-		std::move(sceneQueryData),steerVsForwardSpeedTable
+		std::move(sceneQueryData),steerVsForwardSpeedTable,vhcDesc
 	);
 	AddVehicle(*vhc);
 	vhc->Spawn();

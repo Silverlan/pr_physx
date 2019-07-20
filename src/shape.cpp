@@ -27,6 +27,8 @@ pragma::physics::PhysXShape::PhysXShape(IEnvironment &env,const std::shared_ptr<
 }
 const physx::PxGeometryHolder &pragma::physics::PhysXShape::GetInternalObject() const {return m_geometryHolder;}
 physx::PxGeometryHolder &pragma::physics::PhysXShape::GetInternalObject() {return m_geometryHolder;}
+void pragma::physics::PhysXShape::SetLocalPose(const physics::Transform &localPose) {m_localPose = localPose;}
+pragma::physics::Transform pragma::physics::PhysXShape::GetLocalPose() const {return m_localPose;}
 void pragma::physics::PhysXShape::CalculateLocalInertia(float mass,Vector3 *localInertia) const
 {
 	// TODO
@@ -392,13 +394,15 @@ physx::PxShape &pragma::physics::PhysXActorShape::GetActorShape() const {return 
 pragma::physics::PhysXActorShapeCollection::PhysXActorShapeCollection(PhysXCollisionObject &colObj)
 	: m_collisionObject{colObj}
 {}
-pragma::physics::PhysXActorShape *pragma::physics::PhysXActorShapeCollection::AttachShapeToActor(PhysXShape &shape,PhysXMaterial &mat)
+pragma::physics::PhysXActorShape *pragma::physics::PhysXActorShapeCollection::AttachShapeToActor(PhysXShape &shape,PhysXMaterial &mat,const physics::Transform &localPose)
 {
 	if(m_collisionObject.IsRigid() == false)
 		return nullptr;
 	auto *pxActorShape = physx::PxRigidActorExt::createExclusiveShape(
 		static_cast<PhysXRigidBody&>(m_collisionObject).GetInternalObject(),shape.GetInternalObject().any(),mat.GetInternalObject()
 	);
+	auto pose = localPose *shape.GetLocalPose();
+	pxActorShape->setLocalPose(shape.GetPxEnv().CreatePxTransform(pose));
 	return AddShape(shape,*pxActorShape,true);
 }
 pragma::physics::PhysXActorShape *pragma::physics::PhysXActorShapeCollection::AddShape(PhysXShape &shape,physx::PxShape &pxActorShape)
@@ -433,16 +437,10 @@ void pragma::physics::PhysXActorShapeCollection::ApplySurfaceMaterial(PhysXMater
 		actorShape->ApplySurfaceMaterial(mat);
 }
 
-void pragma::physics::PhysXActorShapeCollection::SetLocalPose(const Transform &t)
+void pragma::physics::PhysXActorShapeCollection::TransformLocalPose(const Transform &t)
 {
 	for(auto &actorShape : m_actorShapes)
-		actorShape->SetLocalPose(t);
-}
-pragma::physics::Transform pragma::physics::PhysXActorShapeCollection::GetLocalPose() const
-{
-	if(m_actorShapes.empty())
-		return Transform{};
-	return m_actorShapes.front()->GetLocalPose();
+		actorShape->SetLocalPose(t *actorShape->GetLocalPose());
 }
 void pragma::physics::PhysXActorShapeCollection::Clear()
 {
