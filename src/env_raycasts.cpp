@@ -113,7 +113,7 @@ static std::unique_ptr<pragma::physics::RayCastFilterCallback> get_raycast_filte
 	std::unique_ptr<pragma::physics::RayCastFilterCallback> pxFilter = nullptr;
 	if(filter)
 	{
-		pxFilter = std::make_unique<pragma::physics::RayCastFilterCallback>(env,*filter);
+		pxFilter = std::make_unique<pragma::physics::RayCastFilterCallback>(env,*filter,umath::is_flag_set(flags,RayCastFlags::InvertFilter));
 		if(filter->HasPreFilter())
 			queryFlags |= physx::PxQueryFlag::ePREFILTER;
 		if(filter->HasPostFilter())

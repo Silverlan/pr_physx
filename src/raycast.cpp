@@ -4,8 +4,11 @@
 #include "pr_physx/shape.hpp"
 #include <pragma/physics/raytraces.h>
 
-pragma::physics::RayCastFilterCallback::RayCastFilterCallback(const pragma::physics::PhysXEnvironment &env,pragma::physics::IRayCastFilterCallback &rayCastFilterCallback)
-	: m_env{env},m_rayCastFilterCallback{rayCastFilterCallback}
+pragma::physics::RayCastFilterCallback::RayCastFilterCallback(
+	const pragma::physics::PhysXEnvironment &env,pragma::physics::IRayCastFilterCallback &rayCastFilterCallback,
+	bool invertResult
+)
+	: m_env{env},m_rayCastFilterCallback{rayCastFilterCallback},m_bInvertResult{invertResult}
 {}
 physx::PxQueryHitType::Enum pragma::physics::RayCastFilterCallback::preFilter(
 	const physx::PxFilterData& filterData, const physx::PxShape* shape, const physx::PxRigidActor* actor, physx::PxHitFlags& queryFlags)
@@ -30,7 +33,19 @@ physx::PxQueryHitType::Enum pragma::physics::RayCastFilterCallback::Filter(const
 	auto hitType = (m_rayCastFilterCallback.*filter)(
 		m_env.GetShape(*shape)->GetShape(),
 		*rigidBody
-		);
+	);
+	if(m_bInvertResult)
+	{
+		switch(hitType)
+		{
+		case RayCastHitType::None:
+			hitType = RayCastHitType::Block;
+			break;
+		case RayCastHitType::Block:
+			hitType = RayCastHitType::None;
+			break;
+		}
+	}
 	switch(hitType)
 	{
 	case RayCastHitType::None:

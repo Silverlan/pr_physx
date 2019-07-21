@@ -86,7 +86,7 @@ namespace pragma::physics
 		virtual void SetBrakeFactor(float f) override;
 		virtual void SetHandbrakeFactor(float f) override;
 		virtual void SetAccelerationFactor(float f) override;
-		virtual void SetTurnFactor(float f) override;
+		virtual void SetSteerFactor(float f) override;
 
 		virtual void SetGear(Gear gear) override;
 		virtual void SetGearDown() override;
@@ -112,6 +112,7 @@ namespace pragma::physics
 		virtual uint32_t GetWheelCount() const override;
 		virtual float GetForwardSpeed() const override;
 		virtual float GetSidewaysSpeed() const override;
+		virtual float GetSteerFactor() const override;
 	protected:
 		virtual bool ShouldUseDigitalInputs() const override;
 	private:
@@ -137,18 +138,6 @@ namespace pragma::physics
 		std::vector<physx::PxWheelQueryResult> m_wheelQueryResults;
 		std::unique_ptr<pragma::physics::VehicleSceneQueryData> m_vehicleSceneQuery = nullptr;
 		physx::PxFixedSizeLookupTable<8> m_steerVsForwardSpeedTable;
-	};
-
-	class PhysXWheel
-		: public IWheel
-	{
-	public:
-		static PhysXWheel &GetWheel(IWheel &w);
-		static const PhysXWheel &GetWheel(const IWheel &w);
-	private:
-		PhysXWheel(IEnvironment &env);
-		virtual void Initialize() override;
-		PhysXEnvironment &GetPxEnv() const;
 	};
 };
 REGISTER_BASIC_BITWISE_OPERATORS(pragma::physics::PhysXVehicle::StateFlags)

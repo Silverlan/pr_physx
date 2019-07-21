@@ -13,7 +13,7 @@ namespace pragma::physics
 		: public physx::PxQueryFilterCallback
 	{
 	public:
-		RayCastFilterCallback(const PhysXEnvironment &env,IRayCastFilterCallback &rayCastFilterCallback);
+		RayCastFilterCallback(const PhysXEnvironment &env,IRayCastFilterCallback &rayCastFilterCallback,bool invertResult);
 		/**
 		\brief This filter callback is executed before the exact intersection test if PxQueryFlag::ePREFILTER flag was set.
 
@@ -38,6 +38,7 @@ namespace pragma::physics
 
 		const PhysXEnvironment &m_env;
 		IRayCastFilterCallback &m_rayCastFilterCallback;
+		bool m_bInvertResult = false;
 	};
 };
 

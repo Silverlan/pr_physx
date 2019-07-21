@@ -121,6 +121,7 @@ namespace pragma::physics
 		virtual bool IsValid() const override;
 		virtual void SetMass(float mass) override;
 		virtual float GetMass() const override;
+		virtual void GetAABB(Vector3 &min,Vector3 &max) const override;
 	protected:
 		PhysXCompoundShape(IEnvironment &env);
 

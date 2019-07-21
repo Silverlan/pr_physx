@@ -107,6 +107,19 @@ std::optional<pragma::physics::Transform> pragma::physics::PhysXVehicle::GetLoca
 	return actorShapes.at(wheelCreateInfo.shapeIndex)->GetLocalPose();
 }
 uint32_t pragma::physics::PhysXVehicle::GetWheelCount() const {return 4;}
+float pragma::physics::PhysXVehicle::GetSteerFactor() const
+{
+	if(ShouldUseDigitalInputs())
+	{
+		auto steerFactor = 0.f;
+		if(m_inputData.getDigitalSteerLeft())
+			steerFactor -= 1.f;
+		if(m_inputData.getDigitalSteerRight())
+			steerFactor += 1.f;
+		return steerFactor;
+	}
+	return m_inputData.getAnalogSteer();
+}
 float pragma::physics::PhysXVehicle::GetForwardSpeed() const
 {
 	return GetPxEnv().FromPhysXLength(m_vehicle->computeForwardSpeed());
@@ -150,19 +163,25 @@ void pragma::physics::PhysXVehicle::SetHandbrakeFactor(float f)
 }
 void pragma::physics::PhysXVehicle::SetAccelerationFactor(float f)
 {
+	auto gear = GetCurrentGear();
+	if(f < 0.f && gear != Gear::Reverse)
+	{
+		f = -f;
+		ChangeToGear(Gear::Reverse);
+	}
+	else if(f > 0.f && gear == Gear::Reverse)
+		ChangeToGear(Gear::First);
 	if(ShouldUseDigitalInputs())
 		m_inputData.setDigitalAccel(AnalogInputToDigital(f));
 	else
 		m_inputData.setAnalogAccel(f);
 }
-void pragma::physics::PhysXVehicle::SetTurnFactor(float f)
+void pragma::physics::PhysXVehicle::SetSteerFactor(float f)
 {
 	if(ShouldUseDigitalInputs())
 	{
-		if(f < 0.f)
-			m_inputData.setDigitalSteerLeft(AnalogInputToDigital(-f));
-		else
-			m_inputData.setDigitalSteerRight(AnalogInputToDigital(f));
+		m_inputData.setDigitalSteerLeft(AnalogInputToDigital(-f));
+		m_inputData.setDigitalSteerRight(AnalogInputToDigital(f));
 	}
 	else
 		m_inputData.setAnalogSteer(f);
@@ -240,25 +259,4 @@ void pragma::physics::PhysXVehicle::SetWheelRotationSpeed(WheelIndex wheel,umath
 }
 
 bool pragma::physics::PhysXVehicle::IsInAir() const {return umath::is_flag_set(m_stateFlags,StateFlags::InAir);}
-
-////////////////
-
-pragma::physics::PhysXWheel &pragma::physics::PhysXWheel::GetWheel(IWheel &w)
-{
-	return *static_cast<PhysXWheel*>(w.GetUserData());
-}
-const pragma::physics::PhysXWheel &GetVehicle(const pragma::physics::IWheel &v) {return GetVehicle(const_cast<pragma::physics::IWheel&>(v));}
-
-pragma::physics::PhysXWheel::PhysXWheel(IEnvironment &env)
-	: IWheel{env}
-{
-	SetUserData(this);
-}
-void pragma::physics::PhysXWheel::Initialize()
-{
-	IWheel::Initialize();
-	// TODO
-	//GetInternalObject().userData = this;
-}
-pragma::physics::PhysXEnvironment &pragma::physics::PhysXWheel::GetPxEnv() const {return static_cast<PhysXEnvironment&>(m_physEnv);}
 #pragma optimize("",on)

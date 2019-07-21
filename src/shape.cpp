@@ -35,8 +35,8 @@ void pragma::physics::PhysXShape::CalculateLocalInertia(float mass,Vector3 *loca
 }
 void pragma::physics::PhysXShape::GetAABB(Vector3 &min,Vector3 &max) const
 {
-	min = m_bounds.first;
-	max = m_bounds.second;
+	min = m_localPose *m_bounds.first;
+	max = m_localPose *m_bounds.second;
 }
 void pragma::physics::PhysXShape::UpdateBounds()
 {
@@ -280,6 +280,7 @@ bool pragma::physics::PhysXCompoundShape::IsValid() const
 }
 void pragma::physics::PhysXCompoundShape::SetMass(float mass) {ICompoundShape::SetMass(mass);}
 float pragma::physics::PhysXCompoundShape::GetMass() const {return ICompoundShape::GetMass();}
+void pragma::physics::PhysXCompoundShape::GetAABB(Vector3 &min,Vector3 &max) const {return ICompoundShape::GetAABB(min,max);}
 
 //////////////
 
