@@ -107,18 +107,53 @@ std::optional<pragma::physics::Transform> pragma::physics::PhysXVehicle::GetLoca
 	return actorShapes.at(wheelCreateInfo.shapeIndex)->GetLocalPose();
 }
 uint32_t pragma::physics::PhysXVehicle::GetWheelCount() const {return 4;}
+umath::Radian pragma::physics::PhysXVehicle::GetWheelYawAngle(WheelIndex wheel) const
+{
+	auto pose = GetLocalWheelPose(wheel);
+	if(pose.has_value() == false)
+		return 0.f;
+	return umath::deg_to_rad(EulerAngles{pose->GetRotation()}.y);
+}
+umath::Radian pragma::physics::PhysXVehicle::GetWheelRollAngle(WheelIndex wheel) const
+{
+	if(wheel >= m_vehicle->mWheelsDynData.getNbWheelRotationAngle())
+		return 0.f;
+	return m_vehicle->mWheelsDynData.getWheelRotationAngle(wheel);
+}
 float pragma::physics::PhysXVehicle::GetSteerFactor() const
 {
 	if(ShouldUseDigitalInputs())
 	{
 		auto steerFactor = 0.f;
 		if(m_inputData.getDigitalSteerLeft())
-			steerFactor -= 1.f;
-		if(m_inputData.getDigitalSteerRight())
 			steerFactor += 1.f;
+		if(m_inputData.getDigitalSteerRight())
+			steerFactor -= 1.f;
 		return steerFactor;
 	}
 	return m_inputData.getAnalogSteer();
+}
+float pragma::physics::PhysXVehicle::GetBrakeFactor() const
+{
+	if(ShouldUseDigitalInputs())
+		return DigitalInputToAnalog(m_inputData.getDigitalBrake());
+	return m_inputData.getAnalogBrake();
+}
+float pragma::physics::PhysXVehicle::GetHandbrakeFactor() const
+{
+	if(ShouldUseDigitalInputs())
+		return DigitalInputToAnalog(m_inputData.getDigitalHandbrake());
+	return m_inputData.getAnalogHandbrake();
+}
+float pragma::physics::PhysXVehicle::GetAccelerationFactor() const
+{
+	if(ShouldUseDigitalInputs())
+		return DigitalInputToAnalog(m_inputData.getDigitalAccel());
+	return m_inputData.getAnalogAccel();
+}
+umath::Radian pragma::physics::PhysXVehicle::GetWheelRotationSpeed(WheelIndex wheel) const
+{
+	return m_vehicle->mWheelsDynData.getWheelRotationSpeed(wheel);
 }
 float pragma::physics::PhysXVehicle::GetForwardSpeed() const
 {
@@ -164,13 +199,14 @@ void pragma::physics::PhysXVehicle::SetHandbrakeFactor(float f)
 void pragma::physics::PhysXVehicle::SetAccelerationFactor(float f)
 {
 	auto gear = GetCurrentGear();
-	if(f < 0.f && gear != Gear::Reverse)
+	if(f < 0.f)
 	{
 		f = -f;
-		ChangeToGear(Gear::Reverse);
+		if(gear != Gear::Reverse)
+			SetGear(Gear::Reverse);
 	}
 	else if(f > 0.f && gear == Gear::Reverse)
-		ChangeToGear(Gear::First);
+		SetGear(Gear::First);
 	if(ShouldUseDigitalInputs())
 		m_inputData.setDigitalAccel(AnalogInputToDigital(f));
 	else
@@ -180,8 +216,8 @@ void pragma::physics::PhysXVehicle::SetSteerFactor(float f)
 {
 	if(ShouldUseDigitalInputs())
 	{
-		m_inputData.setDigitalSteerLeft(AnalogInputToDigital(-f));
-		m_inputData.setDigitalSteerRight(AnalogInputToDigital(f));
+		m_inputData.setDigitalSteerRight(AnalogInputToDigital(-f));
+		m_inputData.setDigitalSteerLeft(AnalogInputToDigital(f));
 	}
 	else
 		m_inputData.setAnalogSteer(f);
@@ -239,9 +275,14 @@ pragma::physics::PhysXVehicle::Gear pragma::physics::PhysXVehicle::GetCurrentGea
 {
 	return FromPhysXGear(m_vehicle->mDriveDynData.getCurrentGear());
 }
-float pragma::physics::PhysXVehicle::GetEngineRotationSpeed() const
+umath::Radian pragma::physics::PhysXVehicle::GetEngineRotationSpeed() const
 {
 	return m_vehicle->mDriveDynData.getEngineRotationSpeed();
+}
+
+void pragma::physics::PhysXVehicle::SetEngineRotationSpeed(umath::Radian speed) const
+{
+	m_vehicle->mDriveDynData.setEngineRotationSpeed(speed);
 }
 
 void pragma::physics::PhysXVehicle::SetRestState()

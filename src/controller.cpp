@@ -75,19 +75,8 @@ pragma::physics::IMaterial *pragma::physics::PhysXController::GetGroundMaterial(
 bool pragma::physics::PhysXController::IsTouchingGround() const {return m_pGroundTouchingHit != nullptr;}
 std::optional<Vector3> pragma::physics::PhysXController::GetGroundTouchPos() const {return IsTouchingGround() ? m_pGroundTouchingHit->worldPos : std::optional<Vector3>{};}
 std::optional<Vector3> pragma::physics::PhysXController::GetGroundTouchNormal() const {return IsTouchingGround() ? m_pGroundTouchingHit->worldNormal : std::optional<Vector3>{};}
-pragma::physics::IController::CollisionFlags pragma::physics::PhysXController::GetCollisionFlags() const
-{
-	pragma::physics::IController::CollisionFlags flags = pragma::physics::IController::CollisionFlags::None;
-	auto colFlags = m_controllerState.collisionFlags;
-	if(colFlags &physx::PxControllerCollisionFlag::eCOLLISION_DOWN)
-		flags |= CollisionFlags::Down;
-	if(colFlags &physx::PxControllerCollisionFlag::eCOLLISION_UP)
-		flags |= CollisionFlags::Up;
-	if(colFlags &physx::PxControllerCollisionFlag::eCOLLISION_SIDES)
-		flags |= CollisionFlags::Sides;
-	return flags;
-}
-void pragma::physics::PhysXController::DoMove(Vector3 &disp)
+pragma::physics::IController::CollisionFlags pragma::physics::PhysXController::GetCollisionFlags() const {return m_collisionFlags;}
+void pragma::physics::PhysXController::MoveController(const Vector3 &displacement,bool testOnly)
 {
 	physx::PxFilterData filterData {0,0,0,0};
 	physx::PxControllerFilters filters {};
@@ -95,22 +84,17 @@ void pragma::physics::PhysXController::DoMove(Vector3 &disp)
 	filters.mFilterCallback = m_queryFilterCallback.get();
 	filters.mFilterData = &filterData; // Does this have to be copied?
 	filters.mFilterFlags = physx::PxQueryFlag::eSTATIC | physx::PxQueryFlag::eDYNAMIC | physx::PxQueryFlag::ePREFILTER;
-	// Check ground collision
-	/*auto colFlags = GetInternalObject().move(
-		GetPxEnv().ToPhysXVector(Vector3(0.f,-1.f,0.f)),
+	m_controller->move(
+		GetPxEnv().ToPhysXVector(displacement),
 		0.f,
 		GetPxEnv().GetNetworkState().DeltaTime(),
 		filters
 	);
 	m_controller->getState(m_controllerState);
-	*/
-	auto colFlags = GetInternalObject().move(
-		GetPxEnv().ToPhysXVector(disp),
-		0.f,
-		GetPxEnv().GetNetworkState().DeltaTime(),
-		filters
-	);
-	m_controller->getState(m_controllerState);
+}
+void pragma::physics::PhysXController::DoMove(Vector3 &disp)
+{
+	MoveController(disp,false);
 }
 void pragma::physics::PhysXController::SetPos(const Vector3 &pos)
 {
@@ -214,27 +198,35 @@ void pragma::physics::PhysXController::PreSimulate()
 	m_touchingHits.clear();
 	DoMove(vel);
 }
-#include <sharedutils/scope_guard.h>
+
 void pragma::physics::PhysXController::PostSimulate()
 {
-	// 'touchedActor' should be the actor the controller is standing on,
-	// but for some reason it's NULL in most cases, even if the controller is
-	// standing on something.
 	m_pGroundTouchingHit = nullptr;
+	auto upDir = GetUpDirection();
+	auto groundAng = umath::deg_to_rad(GetSlopeLimit());
+	// Determine ground hit of controller.
+	// m_controllerState.touchedActor is too unreliable, so we
+	// have to determine it manually.
+	for(auto &touchingHit : m_touchingHits)
+	{
+		auto ang = umath::acos(uvec::dot(touchingHit.worldNormal,upDir));
+		if(ang > groundAng)
+			continue;
+		groundAng = ang;
+		m_pGroundTouchingHit = &touchingHit;
+	}
+	
+	m_collisionFlags = pragma::physics::IController::CollisionFlags::None;
+	auto colFlags = m_controllerState.collisionFlags;
+	if(colFlags &physx::PxControllerCollisionFlag::eCOLLISION_DOWN)
+		m_collisionFlags |= CollisionFlags::Down;
+	if(colFlags &physx::PxControllerCollisionFlag::eCOLLISION_UP)
+		m_collisionFlags |= CollisionFlags::Up;
+	if(colFlags &physx::PxControllerCollisionFlag::eCOLLISION_SIDES)
+		m_collisionFlags |= CollisionFlags::Sides;
 
-	/*ScopeGuard sg {[this]() {
-		if(m_pGroundTouchingHit == nullptr)
-			std::cout<<"Not touching ground!"<<std::endl;
-	}};*/
-
-	if(m_controllerState.touchedActor == nullptr)
-		return;
-	auto it = std::find_if(m_touchingHits.begin(),m_touchingHits.end(),[this](const TouchingHit &touchingHit) {
-		return m_controllerState.touchedActor == &PhysXCollisionObject::GetCollisionObject(*touchingHit.body).GetInternalObject();
-	});
-	if(it == m_touchingHits.end())
-		return;
-	m_pGroundTouchingHit = &*it;
+	// Reset controller state
+	m_controllerState = {};
 }
 
 //////////////////////

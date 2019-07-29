@@ -4,6 +4,7 @@
 #include "pr_physx/material.hpp"
 #include "pr_physx/controller.hpp"
 #include <extensions/PxRigidBodyExt.h>
+#include <pragma/util/util_game.hpp>
 
 #pragma optimize("",off)
 pragma::physics::PhysXCollisionObject &pragma::physics::PhysXCollisionObject::GetCollisionObject(ICollisionObject &o)
@@ -277,20 +278,6 @@ void pragma::physics::PhysXRigidBody::SetMassProps(float mass,const Vector3 &ine
 {
 	// TODO
 }
-Vector3 &pragma::physics::PhysXRigidBody::GetInertia()
-{
-	// TODO
-	return Vector3{};
-}
-Mat3 pragma::physics::PhysXRigidBody::GetInvInertiaTensorWorld() const
-{
-	// TODO
-	return Mat3{};
-}
-void pragma::physics::PhysXRigidBody::SetInertia(const Vector3 &inertia)
-{
-	// TODO
-}
 void pragma::physics::PhysXRigidBody::SetController(PhysXController &controller)
 {
 	m_controller = util::weak_shared_handle_cast<IBase,PhysXController>(controller.GetHandle());
@@ -377,6 +364,26 @@ float pragma::physics::PhysXRigidDynamic::GetMass() const
 void pragma::physics::PhysXRigidDynamic::SetMass(float mass)
 {
 	GetInternalObject().setMass(mass);
+}
+void pragma::physics::PhysXRigidDynamic::SetMassAndUpdateInertia(float mass)
+{
+	physx::PxRigidBodyExt::setMassAndUpdateInertia(static_cast<physx::PxRigidBody&>(GetInternalObject()),mass);
+}
+Vector3 pragma::physics::PhysXRigidDynamic::GetInertia()
+{
+	auto inertiaTensor = static_cast<physx::PxRigidBody&>(GetInternalObject()).getMassSpaceInertiaTensor();
+	return GetPxEnv().FromPhysXVector(inertiaTensor *umath::pow2(util::units_to_metres(1.f)));
+}
+Mat3 pragma::physics::PhysXRigidDynamic::GetInvInertiaTensorWorld() const
+{
+	// TODO
+	//auto inertiaTensor = static_cast<physx::PxRigidBody&>(GetInternalObject()).getMassSpaceInvInertiaTensor();
+	return Mat3{};
+}
+void pragma::physics::PhysXRigidDynamic::SetInertia(const Vector3 &inertia)
+{
+	auto inertiaTensor = GetPxEnv().ToPhysXVector(inertia) /umath::pow2(util::units_to_metres(1.f));
+	static_cast<physx::PxRigidBody&>(GetInternalObject()).setMassSpaceInertiaTensor(inertiaTensor);
 }
 Vector3 pragma::physics::PhysXRigidDynamic::GetCenterOfMass() const
 {
@@ -530,6 +537,10 @@ Vector3 pragma::physics::PhysXRigidStatic::GetTotalForce() const {return Vector3
 Vector3 pragma::physics::PhysXRigidStatic::GetTotalTorque() const {return Vector3{};}
 float pragma::physics::PhysXRigidStatic::GetMass() const {return 0.f;}
 void pragma::physics::PhysXRigidStatic::SetMass(float mass) {}
+void pragma::physics::PhysXRigidStatic::SetMassAndUpdateInertia(float mass) {}
+Vector3 pragma::physics::PhysXRigidStatic::GetInertia() {return Vector3{};}
+Mat3 pragma::physics::PhysXRigidStatic::GetInvInertiaTensorWorld() const {return Mat3{};}
+void pragma::physics::PhysXRigidStatic::SetInertia(const Vector3 &inertia) {}
 Vector3 pragma::physics::PhysXRigidStatic::GetCenterOfMass() const {return Vector3{};}
 Vector3 pragma::physics::PhysXRigidStatic::GetLinearVelocity() const {return Vector3{};}
 Vector3 pragma::physics::PhysXRigidStatic::GetAngularVelocity() const {return Vector3{};}

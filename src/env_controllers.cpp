@@ -8,12 +8,12 @@
 void pragma::physics::PhysXEnvironment::InitializeControllerDesc(physx::PxControllerDesc &inOutDesc,float halfHeight,float stepHeight,const Transform &startTransform)
 {
 	auto pos = ToPhysXVector(startTransform.GetOrigin());
-	inOutDesc.contactOffset = 0.1f; // TODO: Scale
+	inOutDesc.contactOffset = 0.1f *0.025f; // TODO: Scale
 	inOutDesc.density = 10.f; // TODO
 	inOutDesc.invisibleWallHeight = 0.f;
 	inOutDesc.material = &dynamic_cast<PhysXMaterial&>(GetGenericMaterial()).GetInternalObject();
 	inOutDesc.maxJumpHeight = 0.0;
-	inOutDesc.nonWalkableMode = physx::PxControllerNonWalkableMode::ePREVENT_CLIMBING_AND_FORCE_SLIDING;
+	inOutDesc.nonWalkableMode = physx::PxControllerNonWalkableMode::ePREVENT_CLIMBING; // ePREVENT_CLIMBING_AND_FORCE_SLIDING
 	inOutDesc.scaleCoeff = 0.8f;
 	inOutDesc.slopeLimit = 1.f; // Arbitrary value > 0, to make sure slope limit is enabled (otherwise it cannot be enabled during runtime). Actual slope limit is set after character creation
 	inOutDesc.stepOffset = ToPhysXLength(stepHeight);

@@ -97,7 +97,8 @@ namespace pragma::physics
 
 		virtual bool ShouldUseAutoGears() const override;
 		virtual Gear GetCurrentGear() const override;
-		virtual float GetEngineRotationSpeed() const override;
+		virtual umath::Radian GetEngineRotationSpeed() const override;
+		virtual void SetEngineRotationSpeed(umath::Radian speed) const override;
 
 		virtual void SetRestState() override;
 
@@ -108,11 +109,18 @@ namespace pragma::physics
 
 		virtual bool IsInAir() const override;
 
-		virtual std::optional<physics::Transform> GetLocalWheelPose(uint32_t wheelIndex) const override;
+		virtual std::optional<physics::Transform> GetLocalWheelPose(WheelIndex wheelIndex) const override;
 		virtual uint32_t GetWheelCount() const override;
 		virtual float GetForwardSpeed() const override;
 		virtual float GetSidewaysSpeed() const override;
 		virtual float GetSteerFactor() const override;
+		virtual umath::Radian GetWheelYawAngle(WheelIndex wheel) const override;
+		virtual umath::Radian GetWheelRollAngle(WheelIndex wheel) const override;
+
+		virtual float GetBrakeFactor() const override;
+		virtual float GetHandbrakeFactor() const override;
+		virtual float GetAccelerationFactor() const override;
+		virtual umath::Radian GetWheelRotationSpeed(WheelIndex wheel) const override;
 	protected:
 		virtual bool ShouldUseDigitalInputs() const override;
 	private:
@@ -122,6 +130,7 @@ namespace pragma::physics
 			const VehicleCreateInfo &createInfo
 		);
 		static constexpr bool AnalogInputToDigital(float fAnalog);
+		static constexpr float DigitalInputToAnalog(bool bDigital);
 		static constexpr physx::PxU32 ToPhysXGear(Gear gear);
 		static constexpr Gear FromPhysXGear(physx::PxU32 gear);
 		virtual void Initialize() override;
@@ -145,6 +154,10 @@ REGISTER_BASIC_BITWISE_OPERATORS(pragma::physics::PhysXVehicle::StateFlags)
 constexpr bool pragma::physics::PhysXVehicle::AnalogInputToDigital(float fAnalog)
 {
 	return fAnalog > 0.f ? true : false;
+}
+constexpr float pragma::physics::PhysXVehicle::DigitalInputToAnalog(bool bDigital)
+{
+	return bDigital ? 1.f : 0.f;
 }
 constexpr physx::PxU32 pragma::physics::PhysXVehicle::ToPhysXGear(Gear gear)
 {

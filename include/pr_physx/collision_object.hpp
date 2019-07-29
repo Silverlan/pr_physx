@@ -109,9 +109,6 @@ namespace pragma::physics
 		virtual Vector3 GetCenterOfMassOffset() const override;
 
 		virtual void SetMassProps(float mass,const Vector3 &inertia) override;
-		virtual Vector3 &GetInertia() override;
-		virtual Mat3 GetInvInertiaTensorWorld() const override;
-		virtual void SetInertia(const Vector3 &inertia) override;
 
 		void SetController(PhysXController &controller);
 		PhysXController *GetController() const;
@@ -154,6 +151,10 @@ namespace pragma::physics
 		virtual Vector3 GetTotalForce() const override;
 		virtual Vector3 GetTotalTorque() const override;
 		virtual float GetMass() const override;
+		virtual Vector3 GetInertia() override;
+		virtual Mat3 GetInvInertiaTensorWorld() const override;
+		virtual void SetInertia(const Vector3 &inertia) override;
+		virtual void SetMassAndUpdateInertia(float mass) override;
 		virtual void SetMass(float mass) override;
 		virtual Vector3 GetCenterOfMass() const override;
 		virtual Vector3 GetLinearVelocity() const override;
@@ -208,6 +209,10 @@ namespace pragma::physics
 		virtual Vector3 GetTotalForce() const override;
 		virtual Vector3 GetTotalTorque() const override;
 		virtual float GetMass() const override;
+		virtual Vector3 GetInertia() override;
+		virtual Mat3 GetInvInertiaTensorWorld() const override;
+		virtual void SetInertia(const Vector3 &inertia) override;
+		virtual void SetMassAndUpdateInertia(float mass) override;
 		virtual void SetMass(float mass) override;
 		virtual Vector3 GetCenterOfMass() const override;
 		virtual Vector3 GetLinearVelocity() const override;

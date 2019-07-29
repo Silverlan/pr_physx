@@ -8,6 +8,7 @@
 #include "pr_physx/raycast.hpp"
 #include "pr_physx/vehicle.hpp"
 #include "pr_physx/sim_event_callback.hpp"
+#include "pr_physx/sim_filter_shader.hpp"
 #include <sharedutils/util.h>
 #include <pragma/math/surfacematerial.h>
 #include <pragma/physics/transform.hpp>
@@ -152,7 +153,7 @@ extern "C"
 		g_pxFoundation = nullptr;
 	}
 };
-
+/*
 physx::PxFilterFlags VehicleFilterShader
 (physx::PxFilterObjectAttributes attributes0, physx::PxFilterData filterData0, 
 	physx::PxFilterObjectAttributes attributes1, physx::PxFilterData filterData1,
@@ -171,7 +172,7 @@ physx::PxFilterFlags VehicleFilterShader
 
 	return physx::PxFilterFlags();
 }
-
+*/
 bool pragma::physics::PhysXEnvironment::Initialize()
 {
 	if(g_pxFoundation == nullptr)
@@ -222,9 +223,9 @@ bool pragma::physics::PhysXEnvironment::Initialize()
 	physx::PxSceneDesc sceneDesc {scale};
 	sceneDesc.gravity = {0.f,0.f,0.f};
 	sceneDesc.simulationEventCallback = m_simEventCallback.get();
-	//sceneDesc.filterShader = physx::PxDefaultSimulationFilterShader;
-	//sceneDesc.filterCallback = m_simFilterCallback.get();
-	sceneDesc.filterShader	= VehicleFilterShader;
+	sceneDesc.filterCallback = m_simFilterCallback.get();
+	sceneDesc.filterShader = PhysXSimulationFilterShader;
+	//sceneDesc.filterShader = VehicleFilterShader;
 	sceneDesc.kineKineFilteringMode = physx::PxPairFilteringMode::eDEFAULT;
 	sceneDesc.staticKineFilteringMode = physx::PxPairFilteringMode::eDEFAULT;
 	sceneDesc.broadPhaseType = physx::PxBroadPhaseType::eABP;
@@ -396,18 +397,12 @@ pragma::physics::IEnvironment::RemainingDeltaTime pragma::physics::PhysXEnvironm
 	auto *pVisDebugger = GetVisualDebugger();
 	if(pVisDebugger)
 	{
-		// TODO
 		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eACTOR_AXES,1.f);
 		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eBODY_AXES,1.f);
 		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_SHAPES,1.f);
-		//m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_DYNAMIC,1.f);
-		//m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_STATIC,1.f);
 		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCONTACT_POINT,1.f);
 		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCONTACT_NORMAL,1.f);
 		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eWORLD_AXES,1.f);
-		// m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_AABBS,1.f);
-		// m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_EDGES,1.f);
-		// m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eCOLLISION_COMPOUNDS,1.f);
 
 		m_scene->setVisualizationParameter(physx::PxVisualizationParameter::eSCALE,1.f);
 

@@ -49,6 +49,8 @@ namespace pragma::physics
 		virtual umath::Degree GetSlopeLimit() const override;
 		virtual void SetStepHeight(float stepHeight) override;
 		virtual float GetStepHeight() const override;
+
+		void MoveController(const Vector3 &displacement,bool testOnly);
 	protected:
 		PhysXController(IEnvironment &env,PhysXUniquePtr<physx::PxController> controller,const util::TSharedHandle<ICollisionObject> &collisionObject);
 		virtual void Initialize() override;
@@ -67,6 +69,7 @@ namespace pragma::physics
 		PhysXUniquePtr<physx::PxController> m_controller = px_null_ptr<physx::PxController>();
 		std::unique_ptr<PhysXQueryFilterCallback> m_queryFilterCallback = nullptr;
 		physx::PxControllerState m_controllerState;
+		pragma::physics::IController::CollisionFlags m_collisionFlags = pragma::physics::IController::CollisionFlags::None;
 		std::vector<TouchingHit> m_touchingHits = {};
 		TouchingHit *m_pGroundTouchingHit = nullptr;
 	};
