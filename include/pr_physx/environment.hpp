@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #ifndef __PR_PX_ENVIRONMENT_HPP__
 #define __PR_PX_ENVIRONMENT_HPP__
 
@@ -56,8 +60,8 @@ namespace pragma::physics
 	{
 	public:
 		PhysXEnvironment(NetworkState &state);
-		static Transform CreateTransform(const physx::PxTransform &pxTransform);
-		static physx::PxTransform CreatePxTransform(const Transform &btTransform);
+		static umath::Transform CreateTransform(const physx::PxTransform &pxTransform);
+		static physx::PxTransform CreatePxTransform(const umath::Transform &btTransform);
 		static PhysXCollisionObject *GetCollisionObject(const physx::PxRigidActor &actor);
 		static PhysXConstraint *GetConstraint(const physx::PxJoint &constraint);
 		static PhysXActorShape *GetShape(const physx::PxShape &shape);
@@ -79,11 +83,13 @@ namespace pragma::physics
 		physx::PxExtendedVec3 ToPhysXExtendedVector(const Vector3 &v) const;
 		physx::PxVec3 ToPhysXNormal(const Vector3 &n) const;
 		physx::PxVec3 ToPhysXTorque(const Vector3 &t) const;
+		float ToPhysXTorque(float force) const;
 		physx::PxQuat ToPhysXRotation(const Quat &rot) const;
 		Vector3 FromPhysXVector(const physx::PxVec3 &v) const;
 		Vector3 FromPhysXVector(const physx::PxExtendedVec3 &v) const;
 		Vector3 FromPhysXNormal(const physx::PxVec3 &n) const;
 		Vector3 FromPhysXTorque(const physx::PxVec3 &t) const;
+		float FromPhysXTorque(float force) const;
 		Quat FromPhysXRotation(const physx::PxQuat &v) const;
 		double ToPhysXLength(double len) const;
 		double FromPhysXLength(double len) const;
@@ -100,8 +106,8 @@ namespace pragma::physics
 		virtual util::TSharedHandle<IDoFConstraint> CreateDoFConstraint(IRigidBody &a,const Vector3 &pivotA,const Quat &rotA,IRigidBody &b,const Vector3 &pivotB,const Quat &rotB) override;
 		virtual util::TSharedHandle<IDoFSpringConstraint> CreateDoFSpringConstraint(IRigidBody &a,const Vector3 &pivotA,const Quat &rotA,IRigidBody &b,const Vector3 &pivotB,const Quat &rotB) override;
 
-		virtual util::TSharedHandle<IController> CreateCapsuleController(float halfWidth,float halfHeight,float stepHeight,umath::Degree slopeLimit=DEFAULT_CHARACTER_SLOPE_LIMIT,const Transform &startTransform={}) override;
-		virtual util::TSharedHandle<IController> CreateBoxController(const Vector3 &halfExtents,float stepHeight,umath::Degree slopeLimit=DEFAULT_CHARACTER_SLOPE_LIMIT,const Transform &startTransform={}) override;
+		virtual util::TSharedHandle<IController> CreateCapsuleController(float halfWidth,float halfHeight,float stepHeight,umath::Degree slopeLimit=DEFAULT_CHARACTER_SLOPE_LIMIT,const umath::Transform &startTransform={}) override;
+		virtual util::TSharedHandle<IController> CreateBoxController(const Vector3 &halfExtents,float stepHeight,umath::Degree slopeLimit=DEFAULT_CHARACTER_SLOPE_LIMIT,const umath::Transform &startTransform={}) override;
 		virtual util::TSharedHandle<ICollisionObject> CreateCollisionObject(IShape &shape) override;
 		virtual util::TSharedHandle<IRigidBody> CreateRigidBody(IShape &shape,bool dynamic) override;
 		virtual util::TSharedHandle<ISoftBody> CreateSoftBody(const PhysSoftBodyInfo &info,float mass,const std::vector<Vector3> &verts,const std::vector<uint16_t> &indices,std::vector<uint16_t> &indexTranslations) override;
@@ -142,7 +148,7 @@ namespace pragma::physics
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxRaycastHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxOverlapHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxSweepHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;
-		void InitializeControllerDesc(physx::PxControllerDesc &inOutDesc,float halfHeight,float stepHeight,const Transform &startTransform);
+		void InitializeControllerDesc(physx::PxControllerDesc &inOutDesc,float halfHeight,float stepHeight,const umath::Transform &startTransform);
 		virtual RemainingDeltaTime DoStepSimulation(float timeStep,int maxSubSteps=1,float fixedTimeStep=(1.f /60.f)) override;
 		virtual void UpdateSurfaceTypes() override;
 

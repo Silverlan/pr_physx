@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include "pr_physx/environment.hpp"
 #include "pr_physx/collision_object.hpp"
 #include "pr_physx/raycast.hpp"
@@ -5,7 +9,6 @@
 #include <pragma/entities/baseentity.h>
 #include <pragma/physics/raytraces.h>
 
-#pragma optimize("",off)
 void pragma::physics::PhysXEnvironment::InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxRaycastHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const
 {
 	auto *colObj = raycastHit.actor ? GetCollisionObject(*raycastHit.actor) : nullptr;
@@ -248,4 +251,3 @@ Bool pragma::physics::PhysXEnvironment::Sweep(const TraceData &data,std::vector<
 	return bHitAny;
 }
 physx::PxCooking &pragma::physics::PhysXEnvironment::GetCooking() {return *m_cooking;}
-#pragma optimize("",on)

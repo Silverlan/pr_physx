@@ -1,8 +1,11 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include "pr_physx/query_filter_callback.hpp"
 #include "pr_physx/environment.hpp"
 #include "pr_physx/collision_object.hpp"
 
-#pragma optimize("",off)
 pragma::physics::PhysXQueryFilterCallback::PhysXQueryFilterCallback(ICollisionObject &collisionObject)
 	: m_collisionObject{collisionObject}
 {}
@@ -33,4 +36,3 @@ physx::PxQueryHitType::Enum pragma::physics::BatchQueryPreFilterBlocking(
 {
 	return PX_FILTER_SHOULD_PASS(filterData0,filterData1) ? physx::PxQueryHitType::Enum::eBLOCK : physx::PxQueryHitType::Enum::eNONE;
 }
-#pragma optimize("",on)

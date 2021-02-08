@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include "pr_module.hpp"
 #include "pr_physx/environment.hpp"
 #include "pr_physx/shape.hpp"
@@ -11,7 +15,7 @@
 #include "pr_physx/sim_filter_shader.hpp"
 #include <sharedutils/util.h>
 #include <pragma/math/surfacematerial.h>
-#include <pragma/physics/transform.hpp>
+#include <mathutil/transform.hpp>
 #include <pragma/physics/visual_debugger.hpp>
 #include <pragma/entities/baseentity.h>
 #include <pragma/util/util_game.hpp>
@@ -22,12 +26,11 @@
 #include <common/windows/PxWindowsDelayLoadHook.h>
 #endif
 
-#pragma optimize("",off)
-pragma::physics::Transform pragma::physics::PhysXEnvironment::CreateTransform(const physx::PxTransform &pxTransform)
+umath::Transform pragma::physics::PhysXEnvironment::CreateTransform(const physx::PxTransform &pxTransform)
 {
-	return Transform {uvec::create(pxTransform.p),uquat::create(pxTransform.q)};
+	return umath::Transform {uvec::create(pxTransform.p),uquat::create(pxTransform.q)};
 }
-physx::PxTransform pragma::physics::PhysXEnvironment::CreatePxTransform(const Transform &t)
+physx::PxTransform pragma::physics::PhysXEnvironment::CreatePxTransform(const umath::Transform &t)
 {
 	return physx::PxTransform {uvec::create_px(t.GetOrigin()),uquat::create_px(t.GetRotation())};
 }
@@ -201,7 +204,7 @@ bool pragma::physics::PhysXEnvironment::Initialize()
 	auto bEnableDebugging = g_pxPvd != nullptr;
 
 	physx::PxTolerancesScale scale;
-	scale.length = util::metres_to_units(1);
+	scale.length = util::pragma::metres_to_units(1);
 	scale.speed = 600.f;
 	if(g_pxPhysics == nullptr)
 	{
@@ -304,6 +307,10 @@ physx::PxVec3 pragma::physics::PhysXEnvironment::ToPhysXTorque(const Vector3 &t)
 {
 	return physx::PxVec3{t.x,t.y,t.z};
 }
+float pragma::physics::PhysXEnvironment::ToPhysXTorque(float force) const
+{
+	return force;
+}
 physx::PxQuat pragma::physics::PhysXEnvironment::ToPhysXRotation(const Quat &rot) const
 {
 	return physx::PxQuat{rot.x,rot.y,rot.z,rot.w};
@@ -320,6 +327,10 @@ Vector3 pragma::physics::PhysXEnvironment::FromPhysXTorque(const physx::PxVec3 &
 {
 	return Vector3{t.x,t.y,t.z};
 }
+float pragma::physics::PhysXEnvironment::FromPhysXTorque(float force) const
+{
+	return force;
+}
 Quat pragma::physics::PhysXEnvironment::FromPhysXRotation(const physx::PxQuat &v) const
 {
 	return Quat{v.w,v.x,v.y,v.z};
@@ -329,7 +340,7 @@ physx::PxVehicleDrivableSurfaceToTireFrictionPairs &pragma::physics::PhysXEnviro
 physx::PxScene &pragma::physics::PhysXEnvironment::GetScene() const {return *m_scene;}
 double pragma::physics::PhysXEnvironment::ToPhysXLength(double len) const {return len;}
 double pragma::physics::PhysXEnvironment::FromPhysXLength(double len) const {return len;}
-float pragma::physics::PhysXEnvironment::FromPhysXMass(float mass) const {return mass *umath::pow3(util::units_to_metres(1.f));}
+float pragma::physics::PhysXEnvironment::FromPhysXMass(float mass) const {return mass *umath::pow3(util::pragma::units_to_metres(1.f));}
 
 const Color &pragma::physics::PhysXEnvironment::FromPhysXColor(uint32_t color)
 {
@@ -375,7 +386,7 @@ pragma::physics::IEnvironment::RemainingDeltaTime pragma::physics::PhysXEnvironm
 		return timeStep;
 	
 	for(auto &hController : GetControllers())
-		PhysXController::GetController(*hController).PreSimulate();
+		PhysXController::GetController(*hController).PreSimulate(timeStep);
 
 	auto t = timeStep /fixedTimeStep;
 	auto numSubSteps = umath::floor(t);
@@ -392,7 +403,7 @@ pragma::physics::IEnvironment::RemainingDeltaTime pragma::physics::PhysXEnvironm
 	}
 
 	for(auto &hController : GetControllers())
-		PhysXController::GetController(*hController).PostSimulate();
+		PhysXController::GetController(*hController).PostSimulate(timeStep);
 	
 	auto *pVisDebugger = GetVisualDebugger();
 	if(pVisDebugger)
@@ -444,4 +455,3 @@ pragma::physics::IEnvironment::RemainingDeltaTime pragma::physics::PhysXEnvironm
 	}
 	return fmodf(timeStep,fixedTimeStep);
 }
-#pragma optimize("",on)

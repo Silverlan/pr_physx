@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include "pr_physx/sim_event_callback.hpp"
 #include "pr_physx/environment.hpp"
 #include "pr_physx/shape.hpp"
@@ -6,6 +10,7 @@
 #include "pr_physx/collision_object.hpp"
 #include <pragma/physics/contact.hpp>
 
+#pragma optimize("",off)
 void pragma::physics::PhysXSimulationEventCallback::onConstraintBreak(physx::PxConstraintInfo *constraints,physx::PxU32 count)
 {
 	for(auto i=decltype(count){0u};i<count;++i)
@@ -23,11 +28,17 @@ void pragma::physics::PhysXSimulationEventCallback::onWake(physx::PxActor **acto
 {
 	for(auto i=decltype(count){0u};i<count;++i)
 	{
-		auto *pActor = dynamic_cast<physx::PxRigidActor*>(actors[i]);
-		auto *actor = pActor ? PhysXEnvironment::GetCollisionObject(*pActor) : nullptr;
-		if(actor == nullptr || actor->IsSleepReportEnabled() == false)
+		auto *actor = actors[i];
+		if(actor == nullptr)
 			continue;
-		actor->OnWake();
+		auto type = actor->getType();
+		if(type != physx::PxActorType::eRIGID_STATIC && type != physx::PxActorType::eRIGID_DYNAMIC)
+			continue;
+		auto *rigidActor = static_cast<physx::PxRigidActor*>(actor);
+		auto *pragmaActor = PhysXEnvironment::GetCollisionObject(*rigidActor);
+		if(pragmaActor == nullptr)
+			continue;
+		pragmaActor->OnWake();
 	}
 }
 
@@ -35,11 +46,17 @@ void pragma::physics::PhysXSimulationEventCallback::onSleep(physx::PxActor **act
 {
 	for(auto i=decltype(count){0u};i<count;++i)
 	{
-		auto *pActor = dynamic_cast<physx::PxRigidActor*>(actors[i]);
-		auto *actor = pActor ? PhysXEnvironment::GetCollisionObject(*pActor) : nullptr;
-		if(actor == nullptr || actor->IsSleepReportEnabled() == false)
+		auto *actor = actors[i];
+		if(actor == nullptr)
 			continue;
-		actor->OnSleep();
+		auto type = actor->getType();
+		if(type != physx::PxActorType::eRIGID_STATIC && type != physx::PxActorType::eRIGID_DYNAMIC)
+			continue;
+		auto *rigidActor = static_cast<physx::PxRigidActor*>(actor);
+		auto *pragmaActor = PhysXEnvironment::GetCollisionObject(*rigidActor);
+		if(pragmaActor == nullptr)
+			continue;
+		pragmaActor->OnSleep();
 	}
 }
 
@@ -121,3 +138,4 @@ void pragma::physics::PhysXSimulationEventCallback::onAdvance(const physx::PxRig
 }
 
 pragma::physics::PhysXSimulationEventCallback::~PhysXSimulationEventCallback() {}
+#pragma optimize("",on)

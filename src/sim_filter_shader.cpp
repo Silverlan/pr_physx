@@ -32,7 +32,6 @@
 
 using namespace physx;
 
-#pragma optimize("",off)
 namespace pragma::physics
 {
 //#define GROUP_SIZE	32
@@ -331,4 +330,3 @@ void pragma::physics::PhysXSetGroupsMask(physx::PxActor& actor, const PhysXGroup
 	PxFilterData fd = convert(mask);
 	setFilterData<true>(actor, fd);
 }
-#pragma optimize("",on)

@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include "pr_physx/environment.hpp"
 #include "pr_physx/material.hpp"
 #include "pr_physx/shape.hpp"
@@ -5,7 +9,7 @@
 #include "pr_physx/controller.hpp"
 #include <pragma/networkstate/networkstate.h>
 
-void pragma::physics::PhysXEnvironment::InitializeControllerDesc(physx::PxControllerDesc &inOutDesc,float halfHeight,float stepHeight,const Transform &startTransform)
+void pragma::physics::PhysXEnvironment::InitializeControllerDesc(physx::PxControllerDesc &inOutDesc,float halfHeight,float stepHeight,const umath::Transform &startTransform)
 {
 	auto pos = ToPhysXVector(startTransform.GetOrigin());
 	inOutDesc.contactOffset = 0.1f *0.025f; // TODO: Scale
@@ -65,7 +69,7 @@ util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironm
 	return controller;
 }
 
-util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironment::CreateCapsuleController(float halfWidth,float halfHeight,float stepHeight,umath::Degree slopeLimit,const Transform &startTransform)
+util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironment::CreateCapsuleController(float halfWidth,float halfHeight,float stepHeight,umath::Degree slopeLimit,const umath::Transform &startTransform)
 {
 	physx::PxCapsuleControllerDesc capsuleDesc {};
 	InitializeControllerDesc(capsuleDesc,halfHeight,stepHeight,startTransform);
@@ -86,7 +90,7 @@ util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironm
 	AddController(*controller);
 	return controller;
 }
-util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironment::CreateBoxController(const Vector3 &halfExtents,float stepHeight,umath::Degree slopeLimit,const Transform &startTransform)
+util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironment::CreateBoxController(const Vector3 &halfExtents,float stepHeight,umath::Degree slopeLimit,const umath::Transform &startTransform)
 {
 	physx::PxBoxControllerDesc boxDesc {};
 	InitializeControllerDesc(boxDesc,halfExtents.y,stepHeight,startTransform);

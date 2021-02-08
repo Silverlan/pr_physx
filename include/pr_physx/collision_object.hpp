@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #ifndef __PR_PX_COLLISION_OBJECT_HPP__
 #define __PR_PX_COLLISION_OBJECT_HPP__
 
@@ -29,7 +33,7 @@ namespace pragma::physics
 		PhysXActorShapeCollection(PhysXCollisionObject &colObj);
 		const std::vector<std::unique_ptr<PhysXActorShape>> &GetActorShapes() const;
 
-		PhysXActorShape *AttachShapeToActor(PhysXShape &shape,PhysXMaterial &mat,const physics::Transform &localPose={});
+		PhysXActorShape *AttachShapeToActor(PhysXShape &shape,PhysXMaterial &mat,const umath::Transform &localPose={});
 		// Adds the shape to the shape list, but does not attach it to the
 		// actor. Assumes that it already has been attached to it!
 		PhysXActorShape *AddShape(PhysXShape &shape,physx::PxShape &actorShape);
@@ -39,7 +43,7 @@ namespace pragma::physics
 
 		void ApplySurfaceMaterial(PhysXMaterial &mat);
 
-		void TransformLocalPose(const Transform &t);
+		void TransformLocalPose(const umath::Transform &t);
 		void CalcMassProps(float mass,Vector3 &centerOfMass);
 	private:
 		void Clear();
@@ -69,7 +73,7 @@ namespace pragma::physics
 		virtual void SetTrigger(bool bTrigger) override;
 		virtual bool IsTrigger() const override;
 
-		virtual void TransformLocalPose(const Transform &t) override;
+		virtual void TransformLocalPose(const umath::Transform &t) override;
 
 		PhysXActorShapeCollection &GetActorShapeCollection() const;
 	protected:
@@ -97,8 +101,8 @@ namespace pragma::physics
 		virtual void SetPos(const Vector3 &pos) override;
 		virtual Quat GetRotation() const override;
 		virtual void SetRotation(const Quat &rot) override;
-		virtual Transform GetWorldTransform() override;
-		virtual void SetWorldTransform(const Transform &t) override;
+		virtual umath::Transform GetWorldTransform() override;
+		virtual void SetWorldTransform(const umath::Transform &t) override;
 
 		virtual void SetSimulationEnabled(bool b) override;
 		virtual bool IsSimulationEnabled() const override;
@@ -138,15 +142,14 @@ namespace pragma::physics
 		virtual void SetStatic(bool b) override;
 		virtual void WakeUp(bool forceActivation=false) override;
 		virtual void PutToSleep() override;
-		virtual bool IsAsleep() const override;
 
 		virtual void SetCCDEnabled(bool b) override;
-		virtual void ApplyForce(const Vector3 &force) override;
-		virtual void ApplyForce(const Vector3 &force,const Vector3 &relPos) override;
-		virtual void ApplyImpulse(const Vector3 &impulse) override;
-		virtual void ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos) override;
-		virtual void ApplyTorque(const Vector3 &torque) override;
-		virtual void ApplyTorqueImpulse(const Vector3 &torque) override;
+		virtual void ApplyForce(const Vector3 &force,bool autoWake=true) override;
+		virtual void ApplyForce(const Vector3 &force,const Vector3 &relPos,bool autoWake=true) override;
+		virtual void ApplyImpulse(const Vector3 &impulse,bool autoWake=true) override;
+		virtual void ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos,bool autoWake=true) override;
+		virtual void ApplyTorque(const Vector3 &torque,bool autoWake=true) override;
+		virtual void ApplyTorqueImpulse(const Vector3 &torque,bool autoWake=true) override;
 		virtual void ClearForces() override;
 		virtual Vector3 GetTotalForce() const override;
 		virtual Vector3 GetTotalTorque() const override;
@@ -159,8 +162,8 @@ namespace pragma::physics
 		virtual Vector3 GetCenterOfMass() const override;
 		virtual Vector3 GetLinearVelocity() const override;
 		virtual Vector3 GetAngularVelocity() const override;
-		virtual void SetLinearVelocity(const Vector3 &vel) override;
-		virtual void SetAngularVelocity(const Vector3 &vel) override;
+		virtual void SetLinearVelocity(const Vector3 &vel,bool autoWake=true) override;
+		virtual void SetAngularVelocity(const Vector3 &vel,bool autoWake=true) override;
 		virtual void SetLinearFactor(const Vector3 &factor) override;
 		virtual void SetAngularFactor(const Vector3 &factor) override;
 		virtual Vector3 GetLinearFactor() const override;
@@ -196,15 +199,14 @@ namespace pragma::physics
 		virtual void SetStatic(bool b) override;
 		virtual void WakeUp(bool forceActivation=false) override;
 		virtual void PutToSleep() override;
-		virtual bool IsAsleep() const override;
 
 		virtual void SetCCDEnabled(bool b) override;
-		virtual void ApplyForce(const Vector3 &force) override;
-		virtual void ApplyForce(const Vector3 &force,const Vector3 &relPos) override;
-		virtual void ApplyImpulse(const Vector3 &impulse) override;
-		virtual void ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos) override;
-		virtual void ApplyTorque(const Vector3 &torque) override;
-		virtual void ApplyTorqueImpulse(const Vector3 &torque) override;
+		virtual void ApplyForce(const Vector3 &force,bool autoWake=true) override;
+		virtual void ApplyForce(const Vector3 &force,const Vector3 &relPos,bool autoWake=true) override;
+		virtual void ApplyImpulse(const Vector3 &impulse,bool autoWake=true) override;
+		virtual void ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos,bool autoWake=true) override;
+		virtual void ApplyTorque(const Vector3 &torque,bool autoWake=true) override;
+		virtual void ApplyTorqueImpulse(const Vector3 &torque,bool autoWake=true) override;
 		virtual void ClearForces() override;
 		virtual Vector3 GetTotalForce() const override;
 		virtual Vector3 GetTotalTorque() const override;
@@ -217,8 +219,8 @@ namespace pragma::physics
 		virtual Vector3 GetCenterOfMass() const override;
 		virtual Vector3 GetLinearVelocity() const override;
 		virtual Vector3 GetAngularVelocity() const override;
-		virtual void SetLinearVelocity(const Vector3 &vel) override;
-		virtual void SetAngularVelocity(const Vector3 &vel) override;
+		virtual void SetLinearVelocity(const Vector3 &vel,bool autoWake=true) override;
+		virtual void SetAngularVelocity(const Vector3 &vel,bool autoWake=true) override;
 		virtual void SetLinearFactor(const Vector3 &factor) override;
 		virtual void SetAngularFactor(const Vector3 &factor) override;
 		virtual Vector3 GetLinearFactor() const override;

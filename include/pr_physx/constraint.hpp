@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #ifndef __PR_PX_CONSTRAINT_HPP__
 #define __PR_PX_CONSTRAINT_HPP__
 
@@ -20,6 +24,12 @@ namespace pragma::physics
 		: virtual public IConstraint
 	{
 	public:
+		enum class StateFlags : uint32_t
+		{
+			None = 0u,
+			Enabled = 1u,
+			Broken = Enabled<<1u
+		};
 		friend IEnvironment;
 		static PhysXConstraint &GetConstraint(IConstraint &c);
 		static const PhysXConstraint &GetConstraint(const IConstraint &c);
@@ -27,15 +37,23 @@ namespace pragma::physics
 
 		virtual void SetEnabled(bool b) override;
 		virtual bool IsEnabled() const override;
-		virtual void EnableCollisions() override;
-		virtual void DisableCollisions() override;
-		virtual pragma::physics::IRigidBody *GetSourceObject() override;
-		virtual pragma::physics::IRigidBody *GetTargetObject() override;
+		virtual bool IsBroken() const override;
+		virtual void Break() override;
+		virtual pragma::physics::IRigidBody *GetSourceActor() override;
+		virtual pragma::physics::IRigidBody *GetTargetActor() override;
 
-		virtual void SetOverrideSolverIterationCount(int32_t count) override;
-		virtual int32_t GetOverrideSolverIterationCount() const override;
-		virtual float GetBreakingImpulseThreshold() const override;
-		virtual void SetBreakingImpulseThreshold(float threshold) override;
+		virtual float GetBreakForce() const override;
+		virtual void SetBreakForce(float force) override;
+		virtual float GetBreakTorque() const override;
+		virtual void SetBreakTorque(float torque) override;
+
+		virtual void SetSoftness(float softness) override;
+		virtual void SetDamping(float damping) override;
+		virtual void SetRestitution(float restitution) override;
+
+		virtual float GetSoftness() const override;
+		virtual float GetDamping() const override;
+		virtual float GetRestitution() const override;
 	protected:
 		PhysXConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> joint);
 		virtual void Initialize() override;
@@ -44,6 +62,7 @@ namespace pragma::physics
 		PhysXEnvironment &GetPxEnv() const;
 		virtual void DoSetCollisionsEnabled(Bool b) override;
 		PhysXUniquePtr<physx::PxJoint> m_joint = px_null_ptr<physx::PxJoint>();
+		StateFlags m_stateFlags = StateFlags::Enabled;
 	};
 
 	class PhysXFixedConstraint
@@ -72,8 +91,26 @@ namespace pragma::physics
 	{
 	public:
 		friend IEnvironment;
+		physx::PxRevoluteJoint &GetInternalObject() const;
+		virtual void SetLimit(umath::Radian lowerLimit,umath::Radian upperLimit) override;
+		virtual std::pair<umath::Radian,umath::Radian> GetLimit() const override;
+
+		virtual void SetSoftness(float softness) override;
+		virtual void SetDamping(float damping) override;
+		virtual void SetRestitution(float restitution) override;
+		virtual void DisableLimit() override;
+
+		virtual float GetSoftness() const override;
+		virtual float GetDamping() const override;
+		virtual float GetRestitution() const override;
 	protected:
 		PhysXHingeConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c);
+		void UpdateLimits();
+		umath::Radian m_lowerLimit;
+		umath::Radian m_upperLimit;
+		float m_softness;
+		float m_damping;
+		float m_restitution;
 	};
 
 	class PhysXSliderConstraint
@@ -82,8 +119,25 @@ namespace pragma::physics
 	{
 	public:
 		friend IEnvironment;
+		physx::PxPrismaticJoint &GetInternalObject() const;
+		virtual void SetLimit(float lowerLimit,float upperLimit) override;
+		virtual void SetSoftness(float softness) override;
+		virtual void SetDamping(float damping) override;
+		virtual void SetRestitution(float restitution) override;
+		virtual void DisableLimit() override;
+
+		virtual std::pair<float,float> GetLimit() const override;
+		virtual float GetSoftness() const override;
+		virtual float GetDamping() const override;
+		virtual float GetRestitution() const override;
 	protected:
 		PhysXSliderConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c);
+		void UpdateLimits();
+		float m_softness;
+		float m_damping;
+		float m_restitution;
+		float m_lowerLimit;
+		float m_upperLimit;
 	};
 
 	class PhysXConeTwistConstraint
@@ -92,9 +146,28 @@ namespace pragma::physics
 	{
 	public:
 		friend IEnvironment;
-		virtual void SetLimit(float swingSpan1,float swingSpan2,float twistSpan,float softness=1.f,float biasFactor=0.3f,float relaxationFactor=1.f) override;
+		physx::PxD6Joint &GetInternalObject() const;
+		virtual void SetLimit(float swingSpan1,float swingSpan2,float twistSpan) override;
+		virtual void SetLimit(const Vector3 &lowerLimits,const Vector3 &upperLimits) override;
+		virtual void GetLimit(float &outSwingSpan1,float &outSwingSpan2,float &outTwistSpan) override;
+
+		virtual void SetSoftness(float softness) override;
+		virtual void SetDamping(float damping) override;
+		virtual void SetRestitution(float restitution) override;
+
+		virtual float GetSoftness() const override;
+		virtual float GetDamping() const override;
+		virtual float GetRestitution() const override;
 	protected:
-		PhysXConeTwistConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c);
+		PhysXConeTwistConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c,const physx::PxTransform &pose0,const physx::PxTransform &pose1);
+		void UpdateLimits();
+		void UpdateLocalPoses();
+		std::array<physx::PxTransform,2> m_localPoses;
+		Vector3 m_lowerLimits;
+		Vector3 m_upperLimits;
+		float m_softness;
+		float m_damping;
+		float m_restitution;
 	};
 
 	class PhysXDoFConstraint
@@ -176,15 +249,15 @@ namespace pragma::physics
 		friend IEnvironment;
 
 		virtual void CalculateTransforms() override;
-		virtual void CalculateTransforms(const Transform &frameA,const Transform &frameB) override;
-		virtual Transform GetCalculatedTransformA() const override;
-		virtual Transform GetCalculatedTransformB() const override;
-		virtual Transform GetFrameOffsetA() const override;
-		virtual Transform GetFrameOffsetB() const override;
+		virtual void CalculateTransforms(const umath::Transform &frameA,const umath::Transform &frameB) override;
+		virtual umath::Transform GetCalculatedTransformA() const override;
+		virtual umath::Transform GetCalculatedTransformB() const override;
+		virtual umath::Transform GetFrameOffsetA() const override;
+		virtual umath::Transform GetFrameOffsetB() const override;
 		virtual Vector3 GetAxis(pragma::Axis axisIndex) const override;
 		virtual double GetAngle(pragma::Axis axisIndex) const override;
 		virtual double GetRelativePivotPosition(pragma::Axis axisIndex) const override;
-		virtual void SetFrames(const Transform &frameA,const Transform &frameB) override;
+		virtual void SetFrames(const umath::Transform &frameA,const umath::Transform &frameB) override;
 		virtual void SetLinearLowerLimit(const Vector3 &linearLower) override;
 		virtual Vector3 GetLinearLowerLimit() const override;
 		virtual void SetLinearUpperLimit(const Vector3 &linearUpper) override;
@@ -228,5 +301,6 @@ namespace pragma::physics
 		PhysXDoFSpringConstraint(IEnvironment &env,PhysXUniquePtr<physx::PxJoint> c);
 	};
 };
+REGISTER_BASIC_BITWISE_OPERATORS(pragma::physics::PhysXConstraint::StateFlags)
 
 #endif

@@ -1,9 +1,12 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include "pr_physx/environment.hpp"
 #include "pr_physx/material.hpp"
 #include <pragma/networkstate/networkstate.h>
 #include <pragma/game/game.h>
 
-#pragma optimize("",off)
 void pragma::physics::PhysXEnvironment::UpdateSurfaceTypes()
 {
 	auto &tireTypeManager = GetTireTypeManager();
@@ -44,4 +47,3 @@ void pragma::physics::PhysXEnvironment::UpdateSurfaceTypes()
 			m_surfaceTirePairs->setTypePairFriction(pair.first->GetId(),tireTypeId,pair.second);
 	}
 }
-#pragma optimize("",on)

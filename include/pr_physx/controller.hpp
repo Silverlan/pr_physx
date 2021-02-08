@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #ifndef __PR_PX_CONTROLLER_HPP__
 #define __PR_PX_CONTROLLER_HPP__
 
@@ -50,6 +54,9 @@ namespace pragma::physics
 		virtual void SetStepHeight(float stepHeight) override;
 		virtual float GetStepHeight() const override;
 
+		virtual Vector3 GetLinearVelocity() const override;
+		virtual void SetLinearVelocity(const Vector3 &vel) override;
+
 		void MoveController(const Vector3 &displacement,bool testOnly);
 	protected:
 		PhysXController(IEnvironment &env,PhysXUniquePtr<physx::PxController> controller,const util::TSharedHandle<ICollisionObject> &collisionObject);
@@ -64,8 +71,10 @@ namespace pragma::physics
 			Vector3 worldNormal;
 			Vector3 worldPos;
 		};
-		void PreSimulate();
-		void PostSimulate();
+		void PreSimulate(float dt);
+		void PostSimulate(float dt);
+		Vector3 m_velocity {};
+		Vector3 m_preSimulationPosition = {};
 		PhysXUniquePtr<physx::PxController> m_controller = px_null_ptr<physx::PxController>();
 		std::unique_ptr<PhysXQueryFilterCallback> m_queryFilterCallback = nullptr;
 		physx::PxControllerState m_controllerState;

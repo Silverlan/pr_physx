@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include "pr_physx/collision_object.hpp"
 #include "pr_physx/environment.hpp"
 #include "pr_physx/shape.hpp"
@@ -47,7 +51,7 @@ bool pragma::physics::PhysXCollisionObject::IsSleepReportEnabled() const
 void pragma::physics::PhysXCollisionObject::SetTrigger(bool bTrigger) {m_actorShapeCollection.SetTrigger(bTrigger);}
 bool pragma::physics::PhysXCollisionObject::IsTrigger() const {return m_actorShapeCollection.IsTrigger();}
 
-void pragma::physics::PhysXCollisionObject::TransformLocalPose(const Transform &t)
+void pragma::physics::PhysXCollisionObject::TransformLocalPose(const umath::Transform &t)
 {
 	m_actorShapeCollection.TransformLocalPose(t);
 }
@@ -74,6 +78,8 @@ void pragma::physics::PhysXCollisionObject::RemoveWorldObject()
 {
 	if(m_actor == nullptr || IsSpawned() == false)
 		return;
+	if(IsAwake())
+		OnSleep();
 	GetPxEnv().GetScene().removeActor(*m_actor);
 	m_actor = nullptr;
 }
@@ -137,12 +143,12 @@ void pragma::physics::PhysXRigidBody::SetRotation(const Quat &rot)
 	pose.q = GetPxEnv().ToPhysXRotation(rot);
 	GetInternalObject().setGlobalPose(pose);
 }
-pragma::physics::Transform pragma::physics::PhysXRigidBody::GetWorldTransform()
+umath::Transform pragma::physics::PhysXRigidBody::GetWorldTransform()
 {
 	auto t = GetInternalObject().getGlobalPose();
 	return GetPxEnv().CreateTransform(t);
 }
-void pragma::physics::PhysXRigidBody::SetWorldTransform(const Transform &t)
+void pragma::physics::PhysXRigidBody::SetWorldTransform(const umath::Transform &t)
 {
 	auto *pController = GetController();
 	if(pController)
@@ -316,29 +322,29 @@ pragma::physics::ICollisionObject::ActivationState pragma::physics::PhysXRigidDy
 	return ActivationState::Active;
 }
 
-void pragma::physics::PhysXRigidDynamic::ApplyForce(const Vector3 &force)
+void pragma::physics::PhysXRigidDynamic::ApplyForce(const Vector3 &force,bool autoWake)
 {
-	GetInternalObject().addForce(GetPxEnv().ToPhysXVector(force),physx::PxForceMode::eFORCE);
+	GetInternalObject().addForce(GetPxEnv().ToPhysXVector(force),physx::PxForceMode::eFORCE,autoWake);
 }
-void pragma::physics::PhysXRigidDynamic::ApplyForce(const Vector3 &force,const Vector3 &relPos)
+void pragma::physics::PhysXRigidDynamic::ApplyForce(const Vector3 &force,const Vector3 &relPos,bool autoWake)
 {
-	physx::PxRigidBodyExt::addForceAtLocalPos(GetInternalObject(),GetPxEnv().ToPhysXVector(force),GetPxEnv().ToPhysXVector(relPos),physx::PxForceMode::eFORCE);
+	physx::PxRigidBodyExt::addForceAtLocalPos(GetInternalObject(),GetPxEnv().ToPhysXVector(force),GetPxEnv().ToPhysXVector(relPos),physx::PxForceMode::eFORCE,autoWake);
 }
-void pragma::physics::PhysXRigidDynamic::ApplyImpulse(const Vector3 &impulse)
+void pragma::physics::PhysXRigidDynamic::ApplyImpulse(const Vector3 &impulse,bool autoWake)
 {
-	GetInternalObject().addForce(GetPxEnv().ToPhysXVector(impulse),physx::PxForceMode::eIMPULSE);
+	GetInternalObject().addForce(GetPxEnv().ToPhysXVector(impulse),physx::PxForceMode::eIMPULSE,autoWake);
 }
-void pragma::physics::PhysXRigidDynamic::ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos)
+void pragma::physics::PhysXRigidDynamic::ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos,bool autoWake)
 {
-	physx::PxRigidBodyExt::addForceAtLocalPos(GetInternalObject(),GetPxEnv().ToPhysXVector(impulse),GetPxEnv().ToPhysXVector(relPos),physx::PxForceMode::eIMPULSE);
+	physx::PxRigidBodyExt::addForceAtLocalPos(GetInternalObject(),GetPxEnv().ToPhysXVector(impulse),GetPxEnv().ToPhysXVector(relPos),physx::PxForceMode::eIMPULSE,autoWake);
 }
-void pragma::physics::PhysXRigidDynamic::ApplyTorque(const Vector3 &torque)
+void pragma::physics::PhysXRigidDynamic::ApplyTorque(const Vector3 &torque,bool autoWake)
 {
-	GetInternalObject().addTorque(GetPxEnv().ToPhysXTorque(torque),physx::PxForceMode::eFORCE);
+	GetInternalObject().addTorque(GetPxEnv().ToPhysXTorque(torque),physx::PxForceMode::eFORCE,autoWake);
 }
-void pragma::physics::PhysXRigidDynamic::ApplyTorqueImpulse(const Vector3 &torque)
+void pragma::physics::PhysXRigidDynamic::ApplyTorqueImpulse(const Vector3 &torque,bool autoWake)
 {
-	GetInternalObject().addTorque(GetPxEnv().ToPhysXTorque(torque),physx::PxForceMode::eIMPULSE);
+	GetInternalObject().addTorque(GetPxEnv().ToPhysXTorque(torque),physx::PxForceMode::eIMPULSE,autoWake);
 }
 void pragma::physics::PhysXRigidDynamic::ClearForces()
 {
@@ -372,7 +378,7 @@ void pragma::physics::PhysXRigidDynamic::SetMassAndUpdateInertia(float mass)
 Vector3 pragma::physics::PhysXRigidDynamic::GetInertia()
 {
 	auto inertiaTensor = static_cast<physx::PxRigidBody&>(GetInternalObject()).getMassSpaceInertiaTensor();
-	return GetPxEnv().FromPhysXVector(inertiaTensor *umath::pow2(util::units_to_metres(1.f)));
+	return GetPxEnv().FromPhysXVector(inertiaTensor *umath::pow2(util::pragma::units_to_metres(1.f)));
 }
 Mat3 pragma::physics::PhysXRigidDynamic::GetInvInertiaTensorWorld() const
 {
@@ -382,7 +388,7 @@ Mat3 pragma::physics::PhysXRigidDynamic::GetInvInertiaTensorWorld() const
 }
 void pragma::physics::PhysXRigidDynamic::SetInertia(const Vector3 &inertia)
 {
-	auto inertiaTensor = GetPxEnv().ToPhysXVector(inertia) /umath::pow2(util::units_to_metres(1.f));
+	auto inertiaTensor = GetPxEnv().ToPhysXVector(inertia) /umath::pow2(util::pragma::units_to_metres(1.f));
 	static_cast<physx::PxRigidBody&>(GetInternalObject()).setMassSpaceInertiaTensor(inertiaTensor);
 }
 Vector3 pragma::physics::PhysXRigidDynamic::GetCenterOfMass() const
@@ -397,13 +403,13 @@ Vector3 pragma::physics::PhysXRigidDynamic::GetAngularVelocity() const
 {
 	return GetPxEnv().FromPhysXVector(GetInternalObject().getAngularVelocity());
 }
-void pragma::physics::PhysXRigidDynamic::SetLinearVelocity(const Vector3 &vel)
+void pragma::physics::PhysXRigidDynamic::SetLinearVelocity(const Vector3 &vel,bool autoWake)
 {
-	GetInternalObject().setLinearVelocity(GetPxEnv().ToPhysXVector(vel));
+	GetInternalObject().setLinearVelocity(GetPxEnv().ToPhysXVector(vel),autoWake);
 }
-void pragma::physics::PhysXRigidDynamic::SetAngularVelocity(const Vector3 &vel)
+void pragma::physics::PhysXRigidDynamic::SetAngularVelocity(const Vector3 &vel,bool autoWake)
 {
-	GetInternalObject().setAngularVelocity(GetPxEnv().ToPhysXVector(vel));
+	GetInternalObject().setAngularVelocity(GetPxEnv().ToPhysXVector(vel),autoWake);
 }
 void pragma::physics::PhysXRigidDynamic::SetLinearFactor(const Vector3 &factor)
 {
@@ -482,10 +488,6 @@ void pragma::physics::PhysXRigidDynamic::PutToSleep()
 {
 	GetInternalObject().putToSleep();
 }
-bool pragma::physics::PhysXRigidDynamic::IsAsleep() const
-{
-	return GetInternalObject().isSleeping();
-}
 bool pragma::physics::PhysXRigidDynamic::IsStatic() const
 {
 	return GetInternalObject().getRigidBodyFlags().isSet(physx::PxRigidBodyFlag::eKINEMATIC);
@@ -523,15 +525,14 @@ bool pragma::physics::PhysXRigidStatic::IsStatic() const {return true;}
 void pragma::physics::PhysXRigidStatic::SetStatic(bool b) {}
 void pragma::physics::PhysXRigidStatic::WakeUp(bool forceActivation) {}
 void pragma::physics::PhysXRigidStatic::PutToSleep() {}
-bool pragma::physics::PhysXRigidStatic::IsAsleep() const {return true;}
 
 void pragma::physics::PhysXRigidStatic::SetCCDEnabled(bool b) {}
-void pragma::physics::PhysXRigidStatic::ApplyForce(const Vector3 &force) {}
-void pragma::physics::PhysXRigidStatic::ApplyForce(const Vector3 &force,const Vector3 &relPos) {}
-void pragma::physics::PhysXRigidStatic::ApplyImpulse(const Vector3 &impulse) {}
-void pragma::physics::PhysXRigidStatic::ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos) {}
-void pragma::physics::PhysXRigidStatic::ApplyTorque(const Vector3 &torque) {}
-void pragma::physics::PhysXRigidStatic::ApplyTorqueImpulse(const Vector3 &torque) {}
+void pragma::physics::PhysXRigidStatic::ApplyForce(const Vector3 &force,bool autoWake) {}
+void pragma::physics::PhysXRigidStatic::ApplyForce(const Vector3 &force,const Vector3 &relPos,bool autoWake) {}
+void pragma::physics::PhysXRigidStatic::ApplyImpulse(const Vector3 &impulse,bool autoWake) {}
+void pragma::physics::PhysXRigidStatic::ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos,bool autoWake) {}
+void pragma::physics::PhysXRigidStatic::ApplyTorque(const Vector3 &torque,bool autoWake) {}
+void pragma::physics::PhysXRigidStatic::ApplyTorqueImpulse(const Vector3 &torque,bool autoWake) {}
 void pragma::physics::PhysXRigidStatic::ClearForces() {}
 Vector3 pragma::physics::PhysXRigidStatic::GetTotalForce() const {return Vector3{};}
 Vector3 pragma::physics::PhysXRigidStatic::GetTotalTorque() const {return Vector3{};}
@@ -544,8 +545,8 @@ void pragma::physics::PhysXRigidStatic::SetInertia(const Vector3 &inertia) {}
 Vector3 pragma::physics::PhysXRigidStatic::GetCenterOfMass() const {return Vector3{};}
 Vector3 pragma::physics::PhysXRigidStatic::GetLinearVelocity() const {return Vector3{};}
 Vector3 pragma::physics::PhysXRigidStatic::GetAngularVelocity() const {return Vector3{};}
-void pragma::physics::PhysXRigidStatic::SetLinearVelocity(const Vector3 &vel) {}
-void pragma::physics::PhysXRigidStatic::SetAngularVelocity(const Vector3 &vel) {}
+void pragma::physics::PhysXRigidStatic::SetLinearVelocity(const Vector3 &vel,bool autoWake) {}
+void pragma::physics::PhysXRigidStatic::SetAngularVelocity(const Vector3 &vel,bool autoWake) {}
 void pragma::physics::PhysXRigidStatic::SetLinearFactor(const Vector3 &factor) {}
 void pragma::physics::PhysXRigidStatic::SetAngularFactor(const Vector3 &factor) {}
 Vector3 pragma::physics::PhysXRigidStatic::GetLinearFactor() const {return Vector3{};}

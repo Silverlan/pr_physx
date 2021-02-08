@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include "pr_physx/shape.hpp"
 #include "pr_physx/environment.hpp"
 #include "pr_physx/material.hpp"
@@ -9,7 +13,6 @@
 #include <PxShape.h>
 #include <common/PxCoreUtilityTypes.h>
 
-#pragma optimize("",off)
 pragma::physics::PhysXShape &pragma::physics::PhysXShape::GetShape(IShape &s)
 {
 	return *static_cast<PhysXShape*>(s.GetUserData());
@@ -27,8 +30,8 @@ pragma::physics::PhysXShape::PhysXShape(IEnvironment &env,const std::shared_ptr<
 }
 const physx::PxGeometryHolder &pragma::physics::PhysXShape::GetInternalObject() const {return m_geometryHolder;}
 physx::PxGeometryHolder &pragma::physics::PhysXShape::GetInternalObject() {return m_geometryHolder;}
-void pragma::physics::PhysXShape::SetLocalPose(const physics::Transform &localPose) {m_localPose = localPose;}
-pragma::physics::Transform pragma::physics::PhysXShape::GetLocalPose() const {return m_localPose;}
+void pragma::physics::PhysXShape::SetLocalPose(const umath::Transform &localPose) {m_localPose = localPose;}
+umath::Transform pragma::physics::PhysXShape::GetLocalPose() const {return m_localPose;}
 void pragma::physics::PhysXShape::CalculateLocalInertia(float mass,Vector3 *localInertia) const
 {
 	// TODO
@@ -379,11 +382,11 @@ void pragma::physics::PhysXActorShape::ApplySurfaceMaterial(IMaterial &mat)
 	m_actorShape.setMaterials(materials.data(),materials.size());
 }
 
-void pragma::physics::PhysXActorShape::SetLocalPose(const Transform &t)
+void pragma::physics::PhysXActorShape::SetLocalPose(const umath::Transform &t)
 {
 	m_actorShape.setLocalPose(GetPxEnv().CreatePxTransform(t));
 }
-pragma::physics::Transform pragma::physics::PhysXActorShape::GetLocalPose() const
+umath::Transform pragma::physics::PhysXActorShape::GetLocalPose() const
 {
 	return GetPxEnv().CreateTransform(m_actorShape.getLocalPose());
 }
@@ -395,7 +398,7 @@ physx::PxShape &pragma::physics::PhysXActorShape::GetActorShape() const {return 
 pragma::physics::PhysXActorShapeCollection::PhysXActorShapeCollection(PhysXCollisionObject &colObj)
 	: m_collisionObject{colObj}
 {}
-pragma::physics::PhysXActorShape *pragma::physics::PhysXActorShapeCollection::AttachShapeToActor(PhysXShape &shape,PhysXMaterial &mat,const physics::Transform &localPose)
+pragma::physics::PhysXActorShape *pragma::physics::PhysXActorShapeCollection::AttachShapeToActor(PhysXShape &shape,PhysXMaterial &mat,const umath::Transform &localPose)
 {
 	if(m_collisionObject.IsRigid() == false)
 		return nullptr;
@@ -438,7 +441,7 @@ void pragma::physics::PhysXActorShapeCollection::ApplySurfaceMaterial(PhysXMater
 		actorShape->ApplySurfaceMaterial(mat);
 }
 
-void pragma::physics::PhysXActorShapeCollection::TransformLocalPose(const Transform &t)
+void pragma::physics::PhysXActorShapeCollection::TransformLocalPose(const umath::Transform &t)
 {
 	for(auto &actorShape : m_actorShapes)
 		actorShape->SetLocalPose(t *actorShape->GetLocalPose());
@@ -463,4 +466,3 @@ void pragma::physics::PhysXActorShapeCollection::CalcMassProps(float mass,Vector
 	mass = m_actorShapes.front()->GetPxEnv().FromPhysXMass(massProps.mass);
 	centerOfMass = m_actorShapes.front()->GetPxEnv().FromPhysXVector(massProps.centerOfMass);
 }
-#pragma optimize("",on)

@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include "pr_physx/controller.hpp"
 #include "pr_physx/environment.hpp"
 #include "pr_physx/shape.hpp"
@@ -7,7 +11,6 @@
 #include <pragma/networkstate/networkstate.h>
 #include <pragma/math/surfacematerial.h>
 
-#pragma optimize("",off)
 namespace pragma::physics
 {
 	class PhysXControllerFilterCallback
@@ -192,15 +195,30 @@ void pragma::physics::PhysXController::Resize(float newHeight)
 {
 	m_controller->resize(newHeight);
 }
-void pragma::physics::PhysXController::PreSimulate()
+Vector3 pragma::physics::PhysXController::GetLinearVelocity() const {return m_velocity;}
+void pragma::physics::PhysXController::SetLinearVelocity(const Vector3 &vel) {m_velocity = vel;}
+void pragma::physics::PhysXController::PreSimulate(float dt)
 {
+	m_preSimulationPosition = GetPxEnv().FromPhysXVector(m_controller->getPosition());
 	auto &vel = const_cast<Vector3&>(GetMoveVelocity());
 	m_touchingHits.clear();
 	DoMove(vel);
 }
 
-void pragma::physics::PhysXController::PostSimulate()
+void pragma::physics::PhysXController::PostSimulate(float dt)
 {
+	if(dt > 0.f)
+	{
+		auto deltaPos = GetPxEnv().FromPhysXVector(m_controller->getPosition()) -m_preSimulationPosition;
+		if(m_controllerState.isMovingUp == false && uvec::dot(GetUpDirection(),deltaPos) > 0.f)
+		{
+			// Neutralize upwards velocity. This is primarily to make sure stepping
+			// doesn't cause the controller to be launched upwards.
+			deltaPos.y = 0.f;
+		}
+		m_velocity = deltaPos *(1.f /dt);
+	}
+
 	m_pGroundTouchingHit = nullptr;
 	auto upDir = GetUpDirection();
 	auto groundAng = umath::deg_to_rad(GetSlopeLimit());
@@ -277,4 +295,3 @@ void pragma::physics::CustomUserControllerHitReport::onShapeHit(const physx::PxC
 void pragma::physics::CustomUserControllerHitReport::onControllerHit(const physx::PxControllersHit& hit) {}
 
 void pragma::physics::CustomUserControllerHitReport::onObstacleHit(const physx::PxControllerObstacleHit& hit) {}
-#pragma optimize("",on)

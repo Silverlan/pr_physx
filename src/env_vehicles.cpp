@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include "pr_physx/environment.hpp"
 #include "pr_physx/vehicle.hpp"
 #include "pr_physx/material.hpp"
@@ -8,7 +12,6 @@
 #include <pragma/util/util_game.hpp>
 #include <vehicle/PxVehicleSDK.h>
 
-#pragma optimize("",off)
 pragma::physics::VehicleSceneQueryData::VehicleSceneQueryData(uint32_t numQueriesInBatch)
 	: m_batchQueryDesc{numQueriesInBatch,numQueriesInBatch,0}
 {}
@@ -173,7 +176,7 @@ static void setupWheelsSimulationData(
 		physx::PxVec3 suspForceAppCMOffset;
 		physx::PxVec3 tireForceAppCMOffset;
 	};
-	constexpr auto scale = util::metres_to_units(1.f);
+	constexpr auto scale = util::pragma::metres_to_units(1.f);
 	std::vector<WheelData> wheels {};
 	wheels.reserve(vhcCreateInfo.wheels.size());
 	std::vector<physx::PxVec3> wheelCenterActorOffsets;
@@ -295,7 +298,7 @@ static pragma::physics::PhysXUniquePtr<physx::PxVehicleDrive> createVehicle4W(
 {
 	const physx::PxU32 numWheels = vhcCreateInfo.wheels.size();
 
-	constexpr auto scale = util::metres_to_units(1.f);
+	constexpr auto scale = util::pragma::metres_to_units(1.f);
 
 	//Construct a physx actor with shapes for the chassis and wheels.
 	//Set the rigid body mass, moment of inertia, and center of mass offset.
@@ -433,7 +436,7 @@ util::TSharedHandle<pragma::physics::IVehicle> pragma::physics::PhysXEnvironment
 		return nullptr; // Can occur if vehicle is mis-configured (check checked PhysX build)
 
 	//Convert the vehicle from meters to the chosen length scale.
-	constexpr auto scale = util::metres_to_units(1.f);
+	constexpr auto scale = util::pragma::metres_to_units(1.f);
 	customizeVehicleToLengthScale(scale,*gVehicle4W->getRigidDynamicActor(),gVehicle4W->mWheelsSimData,gVehicle4W->mDriveSimData);
 
 	//Convert the steer angle vs forward speed table to the chosen length scale.
@@ -458,4 +461,3 @@ util::TSharedHandle<pragma::physics::IVehicle> pragma::physics::PhysXEnvironment
 	vhc->SetRestState();
 	return util::shared_handle_cast<PhysXVehicle,IVehicle>(vhc);
 }
-#pragma optimize("",on)

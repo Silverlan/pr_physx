@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #ifndef __PR_PX_VEHICLE_HPP__
 #define __PR_PX_VEHICLE_HPP__
 
@@ -109,7 +113,7 @@ namespace pragma::physics
 
 		virtual bool IsInAir() const override;
 
-		virtual std::optional<physics::Transform> GetLocalWheelPose(WheelIndex wheelIndex) const override;
+		virtual std::optional<umath::Transform> GetLocalWheelPose(WheelIndex wheelIndex) const override;
 		virtual uint32_t GetWheelCount() const override;
 		virtual float GetForwardSpeed() const override;
 		virtual float GetSidewaysSpeed() const override;

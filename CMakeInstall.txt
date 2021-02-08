@@ -1,0 +1,7 @@
+pragma_install_create_directory(modules/physics_engines)
+pragma_install_create_directory(modules/physics_engines/physx)
+pragma_install_lib("${CMAKE_CURRENT_BINARY_DIR}/modules/pr_physx/${CONFIG_BUILD_TYPE}/pr_physx${OS_LIB_BIN_EXT}" "modules/physics_engines/physx/" OPTIONAL)
+pragma_install_lib("${DEPENDENCY_PHYSX_LIBRARY}" "modules/physics_engines/physx/" OPTIONAL)
+pragma_install_lib("${DEPENDENCY_PHYSX_COMMON_LIBRARY}" "modules/physics_engines/physx/" OPTIONAL)
+pragma_install_lib("${DEPENDENCY_PHYSX_COOKING_LIBRARY}" "modules/physics_engines/physx/" OPTIONAL)
+pragma_install_lib("${DEPENDENCY_PHYSX_FOUNDATION_LIBRARY}" "modules/physics_engines/physx/" OPTIONAL)

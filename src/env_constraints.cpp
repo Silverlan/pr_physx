@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include "pr_physx/environment.hpp"
 #include "pr_physx/constraint.hpp"
 #include "pr_physx/collision_object.hpp"
@@ -23,54 +27,13 @@ util::TSharedHandle<pragma::physics::IBallSocketConstraint> pragma::physics::Phy
 }
 util::TSharedHandle<pragma::physics::IHingeConstraint> pragma::physics::PhysXEnvironment::CreateHingeConstraint(IRigidBody &a,const Vector3 &pivotA,IRigidBody &b,const Vector3 &pivotB,const Vector3 &axis)
 {
-
-	/*m_rbAFrame.getOrigin() = pivotInA;
-
-	// since no frame is given, assume this to be zero angle and just pick rb transform axis
-	btVector3 rbAxisA1 = rbA.getCenterOfMassTransform().getBasis().getColumn(0);
-
-	btVector3 rbAxisA2;
-	btScalar projection = axisInA.dot(rbAxisA1);
-	if (projection >= 1.0f - SIMD_EPSILON)
-	{
-		rbAxisA1 = -rbA.getCenterOfMassTransform().getBasis().getColumn(2);
-		rbAxisA2 = rbA.getCenterOfMassTransform().getBasis().getColumn(1);
-	}
-	else if (projection <= -1.0f + SIMD_EPSILON)
-	{
-		rbAxisA1 = rbA.getCenterOfMassTransform().getBasis().getColumn(2);
-		rbAxisA2 = rbA.getCenterOfMassTransform().getBasis().getColumn(1);
-	}
-	else
-	{
-		rbAxisA2 = axisInA.cross(rbAxisA1);
-		rbAxisA1 = rbAxisA2.cross(axisInA);
-	}
-
-	m_rbAFrame.getBasis().setValue(rbAxisA1.getX(), rbAxisA2.getX(), axisInA.getX(),
-		rbAxisA1.getY(), rbAxisA2.getY(), axisInA.getY(),
-		rbAxisA1.getZ(), rbAxisA2.getZ(), axisInA.getZ());
-
-	btQuaternion rotationArc = shortestArcQuat(axisInA, axisInB);
-	btVector3 rbAxisB1 = quatRotate(rotationArc, rbAxisA1);
-	btVector3 rbAxisB2 = axisInB.cross(rbAxisB1);
-
-	m_rbBFrame.getOrigin() = pivotInB;
-	m_rbBFrame.getBasis().setValue(rbAxisB1.getX(), rbAxisB2.getX(), axisInB.getX(),
-		rbAxisB1.getY(), rbAxisB2.getY(), axisInB.getY(),
-		rbAxisB1.getZ(), rbAxisB2.getZ(), axisInB.getZ());
-		*/
-
-	auto right = uvec::get_perpendicular(axis);
-	auto up = uvec::cross(axis,right);
-	uvec::normalize(&up);
-	auto rot = uquat::identity();//uquat::create(axis,right,up);
-	//rot /= rot.length();
+	auto rot = uquat::create(axis,umath::deg_to_rad(90.f));
+	constexpr Quat rot90DegPitch {0.70710676908493,0.70710676908493,0,0};
+	rot = rot90DegPitch *rot;
 
 	physx::PxTransform tA {uvec::create_px(pivotA),uquat::create_px(rot)};
 	physx::PxTransform tB {uvec::create_px(pivotB),uquat::create_px(rot)};
 	auto hingeJoint = px_create_unique_ptr<physx::PxJoint>(physx::PxRevoluteJointCreate(GetPhysics(),&ToBtType(a).GetInternalObject(),tA,&ToBtType(b).GetInternalObject(),tB));
-	// TODO: Specify axis?
 	auto r = util::shared_handle_cast<PhysXHingeConstraint,IHingeConstraint>(CreateSharedHandle<PhysXHingeConstraint>(*this,std::move(hingeJoint)));
 	AddConstraint(*r);
 	return r;
@@ -88,9 +51,16 @@ util::TSharedHandle<pragma::physics::IConeTwistConstraint> pragma::physics::Phys
 {
 	physx::PxTransform tA {uvec::create_px(pivotA),uquat::create_px(rotA)};
 	physx::PxTransform tB {uvec::create_px(pivotB),uquat::create_px(rotB)};
-	auto sphericalJoint = px_create_unique_ptr<physx::PxJoint>(physx::PxSphericalJointCreate(GetPhysics(),&ToBtType(a).GetInternalObject(),tA,&ToBtType(b).GetInternalObject(),tB));
-	auto r = util::shared_handle_cast<PhysXConeTwistConstraint,IConeTwistConstraint>(CreateSharedHandle<PhysXConeTwistConstraint>(*this,std::move(sphericalJoint)));
+	auto sphericalJoint = px_create_unique_ptr<physx::PxJoint>(physx::PxD6JointCreate(GetPhysics(),&ToBtType(a).GetInternalObject(),tA,&ToBtType(b).GetInternalObject(),tB));
+	auto r = util::shared_handle_cast<PhysXConeTwistConstraint,IConeTwistConstraint>(CreateSharedHandle<PhysXConeTwistConstraint>(*this,std::move(sphericalJoint),tA,tB));
 	AddConstraint(*r);
+	
+	//r->SetLimit(umath::deg_to_rad(20.f),umath::deg_to_rad(20.f),umath::deg_to_rad(20.f));
+	auto &joint = static_cast<physx::PxD6Joint&>(util::shared_handle_cast<IConeTwistConstraint,PhysXConeTwistConstraint>(r)->GetInternalObject());
+	joint.setMotion(physx::PxD6Axis::eSWING1,physx::PxD6Motion::eLOCKED);
+	joint.setMotion(physx::PxD6Axis::eSWING2,physx::PxD6Motion::eLIMITED);
+	joint.setMotion(physx::PxD6Axis::eTWIST,physx::PxD6Motion::eLOCKED);
+	
 	return r;
 }
 util::TSharedHandle<pragma::physics::IDoFConstraint> pragma::physics::PhysXEnvironment::CreateDoFConstraint(IRigidBody &a,const Vector3 &pivotA,const Quat &rotA,IRigidBody &b,const Vector3 &pivotB,const Quat &rotB)
@@ -100,6 +70,13 @@ util::TSharedHandle<pragma::physics::IDoFConstraint> pragma::physics::PhysXEnvir
 	auto d6Joint = px_create_unique_ptr<physx::PxJoint>(physx::PxD6JointCreate(GetPhysics(),&ToBtType(a).GetInternalObject(),tA,&ToBtType(b).GetInternalObject(),tB));
 	auto r = util::shared_handle_cast<PhysXDoFConstraint,IDoFConstraint>(CreateSharedHandle<PhysXDoFConstraint>(*this,std::move(d6Joint)));
 	AddConstraint(*r);
+
+	auto &joint = static_cast<physx::PxD6Joint&>(util::shared_handle_cast<IDoFConstraint,PhysXDoFConstraint>(r)->GetInternalObject());
+	joint.setMotion(physx::PxD6Axis::eSWING1,physx::PxD6Motion::eFREE);
+	joint.setMotion(physx::PxD6Axis::eSWING2,physx::PxD6Motion::eFREE);
+	joint.setMotion(physx::PxD6Axis::eTWIST,physx::PxD6Motion::eFREE);
+	// TODO
+
 	return r;
 }
 util::TSharedHandle<pragma::physics::IDoFSpringConstraint> pragma::physics::PhysXEnvironment::CreateDoFSpringConstraint(IRigidBody &a,const Vector3 &pivotA,const Quat &rotA,IRigidBody &b,const Vector3 &pivotB,const Quat &rotB)

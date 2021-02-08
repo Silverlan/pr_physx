@@ -1,8 +1,12 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #ifndef __PR_PX_SHAPE_HPP__
 #define __PR_PX_SHAPE_HPP__
 
 #include <pragma/physics/shape.hpp>
-#include <pragma/physics/transform.hpp>
+#include <mathutil/transform.hpp>
 #include "pr_physx/common.hpp"
 
 namespace physx
@@ -28,8 +32,8 @@ namespace pragma::physics
 		const physx::PxGeometryHolder &GetInternalObject() const;
 		physx::PxGeometryHolder &GetInternalObject();
 
-		virtual void SetLocalPose(const physics::Transform &localPose) override;
-		virtual physics::Transform GetLocalPose() const override;
+		virtual void SetLocalPose(const umath::Transform &localPose) override;
+		virtual umath::Transform GetLocalPose() const override;
 
 		virtual void CalculateLocalInertia(float mass,Vector3 *localInertia) const override;
 		virtual void GetAABB(Vector3 &min,Vector3 &max) const override;
@@ -50,7 +54,7 @@ namespace pragma::physics
 		physx::PxGeometryHolder m_geometryHolder = {};
 		std::shared_ptr<IMaterial> m_material = nullptr;
 		std::pair<Vector3,Vector3> m_bounds = {};
-		physics::Transform m_localPose = {};
+		umath::Transform m_localPose = {};
 		float m_mass = 0.f;
 	};
 
@@ -156,8 +160,8 @@ namespace pragma::physics
 
 		void ApplySurfaceMaterial(IMaterial &mat);
 
-		void SetLocalPose(const Transform &t);
-		Transform GetLocalPose() const;
+		void SetLocalPose(const umath::Transform &t);
+		umath::Transform GetLocalPose() const;
 
 		PhysXShape &GetShape() const;
 		physx::PxShape &GetActorShape() const;

@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include "pr_physx/vehicle.hpp"
 #include "pr_physx/environment.hpp"
 #include "pr_physx/collision_object.hpp"
@@ -5,7 +9,6 @@
 #include "pr_physx/query_filter_callback.hpp"
 #include <vehicle/PxVehicleUtil.h>
 
-#pragma optimize("",off)
 pragma::physics::PhysXVehicle &pragma::physics::PhysXVehicle::GetVehicle(IVehicle &c)
 {
 	return *static_cast<PhysXVehicle*>(c.GetUserData());
@@ -94,7 +97,7 @@ void pragma::physics::PhysXVehicle::Initialize()
 	auto numWheels = GetWheelCount();
 	m_wheelQueryResults.resize(numWheels);
 }
-std::optional<pragma::physics::Transform> pragma::physics::PhysXVehicle::GetLocalWheelPose(uint32_t wheelIndex) const
+std::optional<umath::Transform> pragma::physics::PhysXVehicle::GetLocalWheelPose(uint32_t wheelIndex) const
 {
 	auto *colObj = GetCollisionObject();
 	if(colObj == nullptr || wheelIndex >= m_createInfo.wheels.size())
@@ -300,4 +303,3 @@ void pragma::physics::PhysXVehicle::SetWheelRotationSpeed(WheelIndex wheel,umath
 }
 
 bool pragma::physics::PhysXVehicle::IsInAir() const {return umath::is_flag_set(m_stateFlags,StateFlags::InAir);}
-#pragma optimize("",on)
