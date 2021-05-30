@@ -6,6 +6,7 @@
 #define __PR_PX_ENVIRONMENT_HPP__
 
 #include <pragma/physics/environment.hpp>
+#include <pragma/physics/controller.hpp>
 #include <mathutil/uvec.h>
 #include <queue>
 #include "pr_physx/common.hpp"
@@ -142,7 +143,7 @@ namespace pragma::physics
 		friend PhysXConvexHullShape;
 		friend PhysXActorShapeCollection;
 
-		util::TSharedHandle<IController> CreateController(PhysXUniquePtr<physx::PxController> controller);
+		util::TSharedHandle<IController> CreateController(PhysXUniquePtr<physx::PxController> controller,const Vector3 &halfExtents,IController::ShapeType shapeType);
 		void InitializeShape(PhysXActorShape &shape,bool basicOnly=false) const;
 		void InitializeCollisionObject(PhysXCollisionObject &o);
 		void InitializeRayCastResult(const TraceData &data,float rayLength,const physx::PxRaycastHit &raycastHit,TraceResult &outResult,RayCastHitType hitType) const;

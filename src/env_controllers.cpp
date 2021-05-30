@@ -25,7 +25,7 @@ void pragma::physics::PhysXEnvironment::InitializeControllerDesc(physx::PxContro
 	inOutDesc.upDirection = ToPhysXNormal(uquat::up(startTransform.GetRotation()));
 	inOutDesc.volumeGrowth = 1.5f;
 }
-util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironment::CreateController(PhysXUniquePtr<physx::PxController> c)
+util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironment::CreateController(PhysXUniquePtr<physx::PxController> c,const Vector3 &halfExtents,IController::ShapeType shapeType)
 {
 	auto *pActor = c->getActor();
 	physx::PxShape *shapes;
@@ -63,7 +63,7 @@ util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironm
 	InitializeCollisionObject(*rigidBody);
 
 	auto controller = util::shared_handle_cast<PhysXController,IController>(
-		CreateSharedHandle<pragma::physics::PhysXController>(*this,std::move(c),util::shared_handle_cast<PhysXRigidDynamic,ICollisionObject>(rigidBody))
+		CreateSharedHandle<pragma::physics::PhysXController>(*this,std::move(c),util::shared_handle_cast<PhysXRigidDynamic,ICollisionObject>(rigidBody),halfExtents,shapeType)
 	);
 	rigidBody->SetController(PhysXController::GetController(*controller));
 	return controller;
@@ -81,7 +81,7 @@ util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironm
 
 	auto c = px_create_unique_ptr(m_controllerManager->createController(capsuleDesc));
 	auto *pC = c.get();
-	auto controller = c ? CreateController(std::move(c)) : nullptr;
+	auto controller = c ? CreateController(std::move(c),{halfWidth,halfHeight,halfWidth},IController::ShapeType::Capsule) : nullptr;
 	if(controller.IsValid())
 	{
 		pC->setUserData(&PhysXController::GetController(*controller));
@@ -100,7 +100,7 @@ util::TSharedHandle<pragma::physics::IController> pragma::physics::PhysXEnvironm
 
 	auto c = px_create_unique_ptr(m_controllerManager->createController(boxDesc));
 	auto *pC = c.get();
-	auto controller = c ? CreateController(std::move(c)) : nullptr;
+	auto controller = c ? CreateController(std::move(c),halfExtents,IController::ShapeType::Capsule) : nullptr;
 	if(controller.IsValid())
 	{
 		pC->setUserData(&PhysXController::GetController(*controller));

@@ -39,8 +39,8 @@ pragma::physics::PhysXController &pragma::physics::PhysXController::GetControlle
 const pragma::physics::PhysXController &pragma::physics::PhysXController::GetController(const IController &o) {return GetController(const_cast<IController&>(o));}
 static std::unique_ptr<pragma::physics::PhysXControllerFilterCallback> g_filterCallback = nullptr;
 static uint32_t g_controllerCount = 0;
-pragma::physics::PhysXController::PhysXController(IEnvironment &env,PhysXUniquePtr<physx::PxController> controller,const util::TSharedHandle<ICollisionObject> &collisionObject)
-	: IController{env,collisionObject},m_controller{std::move(controller)}
+pragma::physics::PhysXController::PhysXController(IEnvironment &env,PhysXUniquePtr<physx::PxController> controller,const util::TSharedHandle<ICollisionObject> &collisionObject,const Vector3 &halfExtents,ShapeType shapeType)
+	: IController{env,collisionObject,halfExtents,shapeType},m_controller{std::move(controller)}
 {
 	SetUserData(this);
 	m_controller->getState(m_controllerState);
