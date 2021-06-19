@@ -10,7 +10,6 @@
 #include "pr_physx/collision_object.hpp"
 #include <pragma/physics/contact.hpp>
 
-#pragma optimize("",off)
 void pragma::physics::PhysXSimulationEventCallback::onConstraintBreak(physx::PxConstraintInfo *constraints,physx::PxU32 count)
 {
 	for(auto i=decltype(count){0u};i<count;++i)
@@ -138,4 +137,3 @@ void pragma::physics::PhysXSimulationEventCallback::onAdvance(const physx::PxRig
 }
 
 pragma::physics::PhysXSimulationEventCallback::~PhysXSimulationEventCallback() {}
-#pragma optimize("",on)

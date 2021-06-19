@@ -10,7 +10,6 @@
 #include <extensions/PxRigidBodyExt.h>
 #include <pragma/util/util_game.hpp>
 
-#pragma optimize("",off)
 pragma::physics::PhysXCollisionObject &pragma::physics::PhysXCollisionObject::GetCollisionObject(ICollisionObject &o)
 {
 	return *static_cast<PhysXCollisionObject*>(o.GetUserData());
@@ -569,4 +568,3 @@ pragma::physics::PhysXSoftBody::PhysXSoftBody(IEnvironment &env,PhysXUniquePtr<p
 	: ISoftBody{env,shape,{}},PhysXCollisionObject{env,std::move(actor),shape}
 {}
 physx::PxActor &pragma::physics::PhysXSoftBody::GetInternalObject() const {return PhysXCollisionObject::GetInternalObject();}
-#pragma optimize("",on)
