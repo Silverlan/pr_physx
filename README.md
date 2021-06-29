@@ -10,7 +10,7 @@ Building PhysX:
 - Execute generate_projects.bat
 - Use 64-Bit configuration for latest Visual Studio version
 - Open generated solution and build all PhysX libraries in release mode
-- Move the following DLLs to "output/modules/physx":
+- Move the following DLLs to "install/modules/physics_engines/physx":
 	- PhysX_64.dll
 	- PhysXCommon_64.dll
 	- PhysXCooking_64.dll
