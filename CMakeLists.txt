@@ -21,3 +21,9 @@ add_include_dir(glm)
 
 link_generic_module_libraries()
 register_pragma_module(${PROJ_NAME})
+
+#
+
+set_target_properties(pr_physx PROPERTIES FOLDER modules/physics/physx)
+
+set_property(GLOBAL PROPERTY PRAGMA_MODULE_SKIP_TARGET_PROPERTY_FOLDER 1)
