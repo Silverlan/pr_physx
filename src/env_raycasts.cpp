@@ -2,6 +2,9 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include <cinttypes>
+#include <limits>
+#include <pragma/entities/entity_component_manager.hpp>
 #include "pr_physx/environment.hpp"
 #include "pr_physx/collision_object.hpp"
 #include "pr_physx/raycast.hpp"

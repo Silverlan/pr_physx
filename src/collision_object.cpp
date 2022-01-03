@@ -270,6 +270,14 @@ void pragma::physics::PhysXRigidBody::DoSetCollisionFilterMask(CollisionMask mas
 		pxActorShape.setSimulationFilterData(simFilterData);
 	}
 }
+umath::Transform pragma::physics::PhysXRigidBody::GetBaseTransform()
+{
+	return GetPxEnv().CreateTransform(GetInternalObject().getGlobalPose());
+}
+void pragma::physics::PhysXRigidBody::SetBaseTransform(const umath::Transform &t)
+{
+	GetInternalObject().setGlobalPose(GetPxEnv().CreatePxTransform(t));
+}
 void pragma::physics::PhysXRigidBody::SetCenterOfMassOffset(const Vector3 &offset)
 {
 	// TODO

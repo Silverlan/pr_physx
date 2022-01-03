@@ -104,6 +104,9 @@ namespace pragma::physics
 		virtual umath::Transform GetWorldTransform() override;
 		virtual void SetWorldTransform(const umath::Transform &t) override;
 
+		virtual umath::Transform GetBaseTransform() override;
+		virtual void SetBaseTransform(const umath::Transform &t) override;
+
 		virtual void SetSimulationEnabled(bool b) override;
 		virtual bool IsSimulationEnabled() const override;
 		virtual void SetCollisionsEnabled(bool enabled) override;
