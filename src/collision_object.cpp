@@ -331,26 +331,38 @@ pragma::physics::ICollisionObject::ActivationState pragma::physics::PhysXRigidDy
 
 void pragma::physics::PhysXRigidDynamic::ApplyForce(const Vector3 &force,bool autoWake)
 {
+	if(IsKinematic())
+		return;
 	GetInternalObject().addForce(GetPxEnv().ToPhysXVector(force),physx::PxForceMode::eFORCE,autoWake);
 }
 void pragma::physics::PhysXRigidDynamic::ApplyForce(const Vector3 &force,const Vector3 &relPos,bool autoWake)
 {
+	if(IsKinematic())
+		return;
 	physx::PxRigidBodyExt::addForceAtLocalPos(GetInternalObject(),GetPxEnv().ToPhysXVector(force),GetPxEnv().ToPhysXVector(relPos),physx::PxForceMode::eFORCE,autoWake);
 }
 void pragma::physics::PhysXRigidDynamic::ApplyImpulse(const Vector3 &impulse,bool autoWake)
 {
+	if(IsKinematic())
+		return;
 	GetInternalObject().addForce(GetPxEnv().ToPhysXVector(impulse),physx::PxForceMode::eIMPULSE,autoWake);
 }
 void pragma::physics::PhysXRigidDynamic::ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos,bool autoWake)
 {
+	if(IsKinematic())
+		return;
 	physx::PxRigidBodyExt::addForceAtLocalPos(GetInternalObject(),GetPxEnv().ToPhysXVector(impulse),GetPxEnv().ToPhysXVector(relPos),physx::PxForceMode::eIMPULSE,autoWake);
 }
 void pragma::physics::PhysXRigidDynamic::ApplyTorque(const Vector3 &torque,bool autoWake)
 {
+	if(IsKinematic())
+		return;
 	GetInternalObject().addTorque(GetPxEnv().ToPhysXTorque(torque),physx::PxForceMode::eFORCE,autoWake);
 }
 void pragma::physics::PhysXRigidDynamic::ApplyTorqueImpulse(const Vector3 &torque,bool autoWake)
 {
+	if(IsKinematic())
+		return;
 	GetInternalObject().addTorque(GetPxEnv().ToPhysXTorque(torque),physx::PxForceMode::eIMPULSE,autoWake);
 }
 void pragma::physics::PhysXRigidDynamic::ClearForces()
@@ -412,10 +424,14 @@ Vector3 pragma::physics::PhysXRigidDynamic::GetAngularVelocity() const
 }
 void pragma::physics::PhysXRigidDynamic::SetLinearVelocity(const Vector3 &vel,bool autoWake)
 {
+	if(IsKinematic())
+		return;
 	GetInternalObject().setLinearVelocity(GetPxEnv().ToPhysXVector(vel),autoWake);
 }
 void pragma::physics::PhysXRigidDynamic::SetAngularVelocity(const Vector3 &vel,bool autoWake)
 {
+	if(IsKinematic())
+		return;
 	GetInternalObject().setAngularVelocity(GetPxEnv().ToPhysXVector(vel),autoWake);
 }
 void pragma::physics::PhysXRigidDynamic::SetLinearFactor(const Vector3 &factor)
