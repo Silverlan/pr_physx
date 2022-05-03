@@ -6,6 +6,7 @@
 #define __PR_PX_COLLISION_OBJECT_HPP__
 
 #include <pragma/physics/collision_object.hpp>
+#include "shape.hpp"
 #include "pr_physx/common.hpp"
 
 namespace physx
