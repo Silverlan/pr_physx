@@ -19,6 +19,9 @@ add_external_library(physx_pvd)
 add_include_dir(physx_shared)
 add_include_dir(glm)
 
+set(DEPENDENCY_PHYSX_INCLUDE ${CMAKE_CURRENT_LIST_DIR}/third_party/physx/physx/include CACHE PATH "" FORCE)
+set(DEPENDENCY_PHYSX_SHARED_INCLUDE ${CMAKE_CURRENT_LIST_DIR}/third_party/physx/pxshared/include CACHE PATH "" FORCE)
+
 link_generic_module_libraries()
 register_pragma_module(${PROJ_NAME})
 

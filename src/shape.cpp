@@ -108,7 +108,7 @@ void pragma::physics::PhysXShape::UpdateBounds()
 	case physx::PxGeometryType::eHEIGHTFIELD:
 	{
 		// TODO
-		Con::cwar<<"WARNING: Attempted to update AABB for heightfield, which is not yet implemented!"<<Con::endl;
+		Con::cwar<<"Attempted to update AABB for heightfield, which is not yet implemented!"<<Con::endl;
 		min = {};
 		max = {};
 		break;
@@ -116,7 +116,7 @@ void pragma::physics::PhysXShape::UpdateBounds()
 	case physx::PxGeometryType::ePLANE:
 	{
 		// TODO
-		Con::cwar<<"WARNING: Attempted to update AABB for plane, which is not yet implemented!"<<Con::endl;
+		Con::cwar<<"Attempted to update AABB for plane, which is not yet implemented!"<<Con::endl;
 		min = {};
 		max = {};
 		break;
@@ -124,7 +124,7 @@ void pragma::physics::PhysXShape::UpdateBounds()
 	default:
 	{
 		// TODO
-		Con::cwar<<"WARNING: Attempted to update AABB for unknown shape type!"<<Con::endl;
+		Con::cwar<<"Attempted to update AABB for unknown shape type!"<<Con::endl;
 		min = {};
 		max = {};
 		break;
