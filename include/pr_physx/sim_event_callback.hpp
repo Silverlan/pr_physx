@@ -7,12 +7,9 @@
 
 #include "common.hpp"
 
-namespace pragma::physics
-{
-	class PhysXSimulationEventCallback
-		: public physx::PxSimulationEventCallback
-	{
-	public:
+namespace pragma::physics {
+	class PhysXSimulationEventCallback : public physx::PxSimulationEventCallback {
+	  public:
 		/**
 		\brief This is called when a breakable constraint breaks.
 
@@ -25,7 +22,7 @@ namespace pragma::physics
 
 		@see PxConstraint PxConstraintDesc.linearBreakForce PxConstraintDesc.angularBreakForce
 		*/
-		virtual void onConstraintBreak(physx::PxConstraintInfo *constraints,physx::PxU32 count) override;
+		virtual void onConstraintBreak(physx::PxConstraintInfo *constraints, physx::PxU32 count) override;
 
 		/**
 		\brief This is called with the actors which have just been woken up.
@@ -122,15 +119,13 @@ namespace pragma::physics
 
 		@see PxScene.setSimulationEventCallback() PxSceneDesc.simulationEventCallback PxRigidBodyFlag::eENABLE_POSE_INTEGRATION_PREVIEW
 		*/
-		virtual void onAdvance(const physx::PxRigidBody * const *bodyBuffer,const physx::PxTransform *poseBuffer,const physx::PxU32 count) override;
+		virtual void onAdvance(const physx::PxRigidBody *const *bodyBuffer, const physx::PxTransform *poseBuffer, const physx::PxU32 count) override;
 
 		virtual ~PhysXSimulationEventCallback() override;
 	};
 
-	class PhysXSimulationFilterCallback
-		: public physx::PxSimulationFilterCallback
-	{
-	public:
+	class PhysXSimulationFilterCallback : public physx::PxSimulationFilterCallback {
+	  public:
 		virtual ~PhysXSimulationFilterCallback() override {}
 		/**
 		\brief Filter method to specify how a pair of potentially colliding objects should be processed.
@@ -155,10 +150,8 @@ namespace pragma::physics
 
 		@see PxSimulationFilterShader PxFilterData PxFilterObjectAttributes PxFilterFlag PxPairFlag
 		*/
-		virtual		physx::PxFilterFlags	pairFound(	physx::PxU32 pairID,
-			physx::PxFilterObjectAttributes attributes0, physx::PxFilterData filterData0, const physx::PxActor* a0, const physx::PxShape* s0,
-			physx::PxFilterObjectAttributes attributes1, physx::PxFilterData filterData1, const physx::PxActor* a1, const physx::PxShape* s1,
-			physx::PxPairFlags& pairFlags) override
+		virtual physx::PxFilterFlags pairFound(physx::PxU64 pairID, physx::PxFilterObjectAttributes attributes0, physx::PxFilterData filterData0, const physx::PxActor *a0, const physx::PxShape *s0, physx::PxFilterObjectAttributes attributes1, physx::PxFilterData filterData1,
+		  const physx::PxActor *a1, const physx::PxShape *s1, physx::PxPairFlags &pairFlags) override
 		{
 			return physx::PxFilterFlag::eDEFAULT;
 		}
@@ -178,15 +171,7 @@ namespace pragma::physics
 
 		@see pairFound() PxSimulationFilterShader PxFilterData PxFilterObjectAttributes
 		*/
-		virtual		void			pairLost(	physx::PxU32 pairID,
-			physx::PxFilterObjectAttributes attributes0,
-			physx::PxFilterData filterData0,
-			physx::PxFilterObjectAttributes attributes1,
-			physx::PxFilterData filterData1,
-			bool objectRemoved) override
-		{
-
-		}
+		virtual void pairLost(physx::PxU64 pairID, physx::PxFilterObjectAttributes attributes0, physx::PxFilterData filterData0, physx::PxFilterObjectAttributes attributes1, physx::PxFilterData filterData1, bool objectRemoved) override {}
 
 		/**
 		\brief Callback to give the opportunity to change the filter state of a tracked collision pair.
@@ -210,10 +195,7 @@ namespace pragma::physics
 
 		@see pairFound() pairLost() PxFilterFlag PxPairFlag
 		*/
-		virtual		bool			statusChange(physx::PxU32& pairID, physx::PxPairFlags& pairFlags, physx::PxFilterFlags& filterFlags) override
-		{
-			return false;
-		}
+		virtual bool statusChange(physx::PxU64 &pairID, physx::PxPairFlags &pairFlags, physx::PxFilterFlags &filterFlags) override { return false; }
 	};
 };
 

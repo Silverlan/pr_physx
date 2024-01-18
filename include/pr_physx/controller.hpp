@@ -9,20 +9,16 @@
 #include <pragma/physics/controller.hpp>
 #include <mathutil/uvec.h>
 
-namespace physx
-{
+namespace physx {
 	class PxController;
 };
-namespace pragma::physics
-{
+namespace pragma::physics {
 	class PhysXEnvironment;
 	class PhysXQueryFilterCallback;
 	class CustomUserControllerHitReport;
 	class IMaterial;
-	class PhysXController
-		: virtual public IController
-	{
-	public:
+	class PhysXController : virtual public IController {
+	  public:
 		friend IEnvironment;
 		friend PhysXEnvironment;
 		friend CustomUserControllerHitReport;
@@ -57,14 +53,13 @@ namespace pragma::physics
 		virtual Vector3 GetLinearVelocity() const override;
 		virtual void SetLinearVelocity(const Vector3 &vel) override;
 
-		void MoveController(const Vector3 &displacement,bool testOnly);
-	protected:
-		PhysXController(IEnvironment &env,PhysXUniquePtr<physx::PxController> controller,const util::TSharedHandle<ICollisionObject> &collisionObject,const Vector3 &halfExtents,ShapeType shapeType);
+		void MoveController(const Vector3 &displacement, bool testOnly);
+	  protected:
+		PhysXController(IEnvironment &env, PhysXUniquePtr<physx::PxController> controller, const util::TSharedHandle<ICollisionObject> &collisionObject, const Vector3 &halfExtents, ShapeType shapeType);
 		virtual void Initialize() override;
 		virtual void RemoveWorldObject() override;
 		virtual void DoAddWorldObject() override;
-		struct TouchingHit
-		{
+		struct TouchingHit {
 			std::weak_ptr<pragma::physics::IShape> shape;
 			std::weak_ptr<pragma::physics::IMaterial> material;
 			util::TWeakSharedHandle<pragma::physics::IRigidBody> body;
@@ -85,24 +80,20 @@ namespace pragma::physics
 
 	//////////////////////
 
-	class CustomControllerBehaviorCallback
-		: public physx::PxControllerBehaviorCallback
-	{
-	public:
-		virtual physx::PxControllerBehaviorFlags getBehaviorFlags(const physx::PxShape& shape, const physx::PxActor& actor) override;
-		virtual physx::PxControllerBehaviorFlags getBehaviorFlags(const physx::PxController& controller) override;
-		virtual physx::PxControllerBehaviorFlags getBehaviorFlags(const physx::PxObstacle& obstacle) override;
+	class CustomControllerBehaviorCallback : public physx::PxControllerBehaviorCallback {
+	  public:
+		virtual physx::PxControllerBehaviorFlags getBehaviorFlags(const physx::PxShape &shape, const physx::PxActor &actor) override;
+		virtual physx::PxControllerBehaviorFlags getBehaviorFlags(const physx::PxController &controller) override;
+		virtual physx::PxControllerBehaviorFlags getBehaviorFlags(const physx::PxObstacle &obstacle) override;
 	};
 
 	//////////////////////
 
-	class CustomUserControllerHitReport
-		: public physx::PxUserControllerHitReport
-	{
-	public:
-		virtual void onShapeHit(const physx::PxControllerShapeHit& hit) override;
-		virtual void onControllerHit(const physx::PxControllersHit& hit) override;
-		virtual void onObstacleHit(const physx::PxControllerObstacleHit& hit) override;
+	class CustomUserControllerHitReport : public physx::PxUserControllerHitReport {
+	  public:
+		virtual void onShapeHit(const physx::PxControllerShapeHit &hit) override;
+		virtual void onControllerHit(const physx::PxControllersHit &hit) override;
+		virtual void onObstacleHit(const physx::PxControllerObstacleHit &hit) override;
 	};
 };
 

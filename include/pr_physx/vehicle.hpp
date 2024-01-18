@@ -9,17 +9,19 @@
 #include <pragma/physics/vehicle.hpp>
 #include <vector>
 
-namespace pragma::physics
-{
+// No longer functional with PhysX 5.3.1
+// #define ENABLE_PX_VEHICLES
+
+namespace pragma::physics {
 	class PhysXEnvironment;
-	class VehicleSceneQueryData
-	{
-	public:
+#if ENABLE_PX_VEHICLES
+	class VehicleSceneQueryData {
+	  public:
 		VehicleSceneQueryData(uint32_t numQueriesInBatch);
-		~VehicleSceneQueryData()=default;
+		~VehicleSceneQueryData() = default;
 
 		//Allocate scene query data for up to maxNumVehicles and up to maxNumWheelsPerVehicle with numVehiclesInBatch per batch query.
-		static std::unique_ptr<VehicleSceneQueryData> Create(pragma::physics::PhysXEnvironment &env,uint32_t numWheels,physx::PxBatchQueryPreFilterShader preFilterShader,physx::PxBatchQueryPostFilterShader postFilterShader);
+		static std::unique_ptr<VehicleSceneQueryData> Create(pragma::physics::PhysXEnvironment &env, uint32_t numWheels, physx::PxBatchQueryPreFilterShader preFilterShader, physx::PxBatchQueryPostFilterShader postFilterShader);
 
 		const std::vector<physx::PxRaycastQueryResult> &GetRaycastResults() const;
 		std::vector<physx::PxRaycastQueryResult> &GetRaycastResults();
@@ -37,8 +39,7 @@ namespace pragma::physics
 
 		physx::PxU32 GetNumQueriesPerBatch() const;
 		physx::PxU32 GetNumHitResultsPerQuery() const;
-	private:
-
+	  private:
 		//Number of queries per batch
 		physx::PxU32 m_numQueriesPerBatch = 0;
 
@@ -62,21 +63,15 @@ namespace pragma::physics
 		physx::PxBatchQueryDesc m_batchQueryDesc;
 		pragma::physics::PhysXUniquePtr<physx::PxBatchQuery> m_batchQuery = pragma::physics::px_null_ptr<physx::PxBatchQuery>();
 	};
+#endif
 
 	class ICollisionObject;
 	class PhysXEnvironment;
 	class PhysXQueryFilterCallback;
 	class PhysXVehicleDrive;
-	class PhysXVehicle
-		: public IVehicle
-	{
-	public:
-		enum class StateFlags : uint32_t
-		{
-			None = 0u,
-			InAir = 1u,
-			UseDigitalInputs = InAir<<1u
-		};
+	class PhysXVehicle : public IVehicle {
+	  public:
+		enum class StateFlags : uint32_t { None = 0u, InAir = 1u, UseDigitalInputs = InAir << 1u };
 
 		friend PhysXEnvironment;
 		friend IEnvironment;
@@ -108,8 +103,8 @@ namespace pragma::physics
 
 		virtual void ResetControls() override;
 
-		virtual void SetWheelRotationAngle(WheelIndex wheel,umath::Radian angle) override;
-		virtual void SetWheelRotationSpeed(WheelIndex wheel,umath::Radian speed) override;
+		virtual void SetWheelRotationAngle(WheelIndex wheel, umath::Radian angle) override;
+		virtual void SetWheelRotationSpeed(WheelIndex wheel, umath::Radian speed) override;
 
 		virtual bool IsInAir() const override;
 
@@ -125,14 +120,14 @@ namespace pragma::physics
 		virtual float GetHandbrakeFactor() const override;
 		virtual float GetAccelerationFactor() const override;
 		virtual umath::Radian GetWheelRotationSpeed(WheelIndex wheel) const override;
-	protected:
+	  protected:
 		virtual bool ShouldUseDigitalInputs() const override;
-	private:
-		PhysXVehicle(
-			IEnvironment &env,PhysXUniquePtr<physx::PxVehicleDrive> vhc,const util::TSharedHandle<ICollisionObject> &collisionObject,
-			std::unique_ptr<pragma::physics::VehicleSceneQueryData> vhcSceneQueryData,const physx::PxFixedSizeLookupTable<8> &steerVsForwardSpeedTable,
-			const VehicleCreateInfo &createInfo
-		);
+	  private:
+		PhysXVehicle(IEnvironment &env, PhysXUniquePtr<physx::PxVehicleDrive> vhc, const util::TSharedHandle<ICollisionObject> &collisionObject,
+#if ENABLE_PX_VEHICLES
+		  std::unique_ptr<pragma::physics::VehicleSceneQueryData> vhcSceneQueryData,
+#endif
+		  const physx::PxFixedSizeLookupTable<8> &steerVsForwardSpeedTable, const VehicleCreateInfo &createInfo);
 		static constexpr bool AnalogInputToDigital(float fAnalog);
 		static constexpr float DigitalInputToAnalog(bool bDigital);
 		static constexpr physx::PxU32 ToPhysXGear(Gear gear);
@@ -149,24 +144,19 @@ namespace pragma::physics
 		VehicleCreateInfo m_createInfo = {};
 
 		std::vector<physx::PxWheelQueryResult> m_wheelQueryResults;
+#if ENABLE_PX_VEHICLES
 		std::unique_ptr<pragma::physics::VehicleSceneQueryData> m_vehicleSceneQuery = nullptr;
+#endif
 		physx::PxFixedSizeLookupTable<8> m_steerVsForwardSpeedTable;
 	};
 };
 REGISTER_BASIC_BITWISE_OPERATORS(pragma::physics::PhysXVehicle::StateFlags)
 
-constexpr bool pragma::physics::PhysXVehicle::AnalogInputToDigital(float fAnalog)
-{
-	return fAnalog > 0.f ? true : false;
-}
-constexpr float pragma::physics::PhysXVehicle::DigitalInputToAnalog(bool bDigital)
-{
-	return bDigital ? 1.f : 0.f;
-}
+constexpr bool pragma::physics::PhysXVehicle::AnalogInputToDigital(float fAnalog) { return fAnalog > 0.f ? true : false; }
+constexpr float pragma::physics::PhysXVehicle::DigitalInputToAnalog(bool bDigital) { return bDigital ? 1.f : 0.f; }
 constexpr physx::PxU32 pragma::physics::PhysXVehicle::ToPhysXGear(Gear gear)
 {
-	switch(gear)
-	{
+	switch(gear) {
 	case Gear::Reverse:
 		return physx::PxVehicleGearsData::eREVERSE;
 	case Gear::Neutral:
@@ -236,8 +226,7 @@ constexpr physx::PxU32 pragma::physics::PhysXVehicle::ToPhysXGear(Gear gear)
 }
 constexpr pragma::physics::PhysXVehicle::Gear pragma::physics::PhysXVehicle::FromPhysXGear(physx::PxU32 gear)
 {
-	switch(gear)
-	{
+	switch(gear) {
 	case physx::PxVehicleGearsData::eREVERSE:
 		return Gear::Reverse;
 	case physx::PxVehicleGearsData::eNEUTRAL:

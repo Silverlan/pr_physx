@@ -25,7 +25,7 @@
 //
 // Copyright (c) 2008-2019 NVIDIA Corporation. All rights reserved.
 // Copyright (c) 2004-2008 AGEIA Technologies, Inc. All rights reserved.
-// Copyright (c) 2001-2004 NovodeX AG. All rights reserved.  
+// Copyright (c) 2001-2004 NovodeX AG. All rights reserved.
 
 // Note is is based on the physx::PxDefaultSimulationFilterShader
 // example shader from the PhysX SDK
@@ -39,15 +39,13 @@
 
 class PxActor;
 
-namespace pragma::physics
-{
-	class PhysXGroupsMask
-	{
-	public:
-		PX_INLINE	PhysXGroupsMask():bits0(0),bits1(0),bits2(0),bits3(0) {}
-		PX_INLINE	~PhysXGroupsMask() {}
-	
-		physx::PxU16		bits0, bits1, bits2, bits3;
+namespace pragma::physics {
+	class PhysXGroupsMask {
+	  public:
+		PX_INLINE PhysXGroupsMask() : bits0(0), bits1(0), bits2(0), bits3(0) {}
+		PX_INLINE ~PhysXGroupsMask() {}
+
+		physx::PxU16 bits0, bits1, bits2, bits3;
 	};
 
 	/**
@@ -55,18 +53,8 @@ namespace pragma::physics
 
 	@see PxGroupsMask
 	*/
-	struct PhysXFilterOp
-	{
-		enum Enum
-		{
-			PX_FILTEROP_AND,
-			PX_FILTEROP_OR,
-			PX_FILTEROP_XOR,
-			PX_FILTEROP_NAND,
-			PX_FILTEROP_NOR,
-			PX_FILTEROP_NXOR,
-			PX_FILTEROP_SWAP_AND
-		};
+	struct PhysXFilterOp {
+		enum Enum { PX_FILTEROP_AND, PX_FILTEROP_OR, PX_FILTEROP_XOR, PX_FILTEROP_NAND, PX_FILTEROP_NOR, PX_FILTEROP_NXOR, PX_FILTEROP_SWAP_AND };
 	};
 
 	/**
@@ -87,14 +75,8 @@ namespace pragma::physics
 	@see PxSimulationFilterShader
 	*/
 
-	physx::PxFilterFlags PhysXSimulationFilterShader(
-		physx::PxFilterObjectAttributes attributes0,
-		physx::PxFilterData filterData0, 
-		physx::PxFilterObjectAttributes attributes1,
-		physx::PxFilterData filterData1,
-		physx::PxPairFlags& pairFlags,
-		const void* constantBlock,
-		physx::PxU32 constantBlockSize);
+	physx::PxFilterFlags PhysXSimulationFilterShader(physx::PxFilterObjectAttributes attributes0, physx::PxFilterData filterData0, physx::PxFilterObjectAttributes attributes1, physx::PxFilterData filterData1, physx::PxPairFlags &pairFlags, const void *constantBlock,
+	  physx::PxU32 constantBlockSize);
 
 	/**
 		\brief Determines if collision detection is performed between a pair of groups
@@ -134,7 +116,7 @@ namespace pragma::physics
 
 		@see PxSetGroup
 	*/
-	physx::PxU16 PhysXGetGroup(const physx::PxActor& actor);
+	physx::PxU16 PhysXGetGroup(const physx::PxActor &actor);
 
 	/**
 		\brief Sets which collision group this actor is part of
@@ -146,7 +128,7 @@ namespace pragma::physics
 
 		@see PxGetGroup
 	*/
-	void PhysXSetGroup(physx::PxActor& actor, const physx::PxU16 collisionGroup);
+	void PhysXSetGroup(physx::PxActor &actor, const physx::PxU16 collisionGroup);
 
 	/**
 	\brief Retrieves filtering operation. See comments for PxGroupsMask
@@ -157,7 +139,7 @@ namespace pragma::physics
 
 	@see PxSetFilterOps PxSetFilterBool PxSetFilterConstants
 	*/
-	void PhysXGetFilterOps(PhysXFilterOp::Enum& op0, PhysXFilterOp::Enum& op1, PhysXFilterOp::Enum& op2);
+	void PhysXGetFilterOps(PhysXFilterOp::Enum &op0, PhysXFilterOp::Enum &op1, PhysXFilterOp::Enum &op2);
 
 	/**
 	\brief Setups filtering operations. See comments for PxGroupsMask
@@ -168,7 +150,7 @@ namespace pragma::physics
 
 	@see PxSetFilterBool PxSetFilterConstants
 	*/
-	void PhysXSetFilterOps(const PhysXFilterOp::Enum& op0, const PhysXFilterOp::Enum& op1, const PhysXFilterOp::Enum& op2);
+	void PhysXSetFilterOps(const PhysXFilterOp::Enum &op0, const PhysXFilterOp::Enum &op1, const PhysXFilterOp::Enum &op2);
 
 	/**
 	\brief Retrieves filtering's boolean value. See comments for PxGroupsMask
@@ -196,7 +178,7 @@ namespace pragma::physics
 
 	@see PxSetFilterOps PxSetFilterBool PxSetFilterConstants
 	*/
-	void PhysXGetFilterConstants(PhysXGroupsMask& c0, PhysXGroupsMask& c1);
+	void PhysXGetFilterConstants(PhysXGroupsMask &c0, PhysXGroupsMask &c1);
 
 	/**
 	\brief Setups filtering's K0 and K1 value. See comments for PxGroupsMask
@@ -206,7 +188,7 @@ namespace pragma::physics
 
 	@see PxSetFilterOps PxSetFilterBool PxGetFilterConstants
 	*/
-	void PhysXSetFilterConstants(const PhysXGroupsMask& c0, const PhysXGroupsMask& c1);
+	void PhysXSetFilterConstants(const PhysXGroupsMask &c0, const PhysXGroupsMask &c1);
 
 	/**
 	\brief Gets 64-bit mask used for collision filtering. See comments for PxGroupsMask
@@ -217,7 +199,7 @@ namespace pragma::physics
 
 	@see PxSetGroupsMask()
 	*/
-	PhysXGroupsMask PhysXGetGroupsMask(const physx::PxActor& actor);
+	PhysXGroupsMask PhysXGetGroupsMask(const physx::PxActor &actor);
 
 	/**
 	\brief Sets 64-bit mask used for collision filtering. See comments for PxGroupsMask
@@ -227,7 +209,7 @@ namespace pragma::physics
 
 	@see PxGetGroupsMask()
 	*/
-	void PhysXSetGroupsMask(physx::PxActor& actor, const PhysXGroupsMask& mask);
+	void PhysXSetGroupsMask(physx::PxActor &actor, const PhysXGroupsMask &mask);
 };
 
 #endif

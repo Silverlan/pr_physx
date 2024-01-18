@@ -10,16 +10,14 @@
 #include <mathutil/uvec.h>
 #include <queue>
 #include "pr_physx/common.hpp"
+#include <foundation/Px.h>
 
 namespace physx
 {
 	class PxFoundation;
 	class PxPhysics;
-	class PxCooking;
 	class PxPvd;
 	class PxScene;
-	class PxVec3;
-	class PxTransform;
 	class PxRaycastHit;
 	class PxOverlapHit;
 	class PxSweepHit;
@@ -44,6 +42,7 @@ namespace pragma::physics
 	class PhysXConstraint;
 	class PhysXController;
 	class PhysXMaterial;
+	class PxBaseMaterial;
 	class PhysXShape;
 	class PhysXActorShape;
 	class PhysXVehicle;
@@ -63,11 +62,11 @@ namespace pragma::physics
 		PhysXEnvironment(NetworkState &state);
 		static umath::Transform CreateTransform(const physx::PxTransform &pxTransform);
 		static physx::PxTransform CreatePxTransform(const umath::Transform &btTransform);
-		static PhysXCollisionObject *GetCollisionObject(const physx::PxRigidActor &actor);
+		static PhysXCollisionObject *GetCollisionObject(const physx::PxActor &actor);
 		static PhysXConstraint *GetConstraint(const physx::PxJoint &constraint);
 		static PhysXActorShape *GetShape(const physx::PxShape &shape);
 		static PhysXController *GetController(const physx::PxController &controller);
-		static PhysXMaterial *GetMaterial(const physx::PxMaterial &material);
+		static PhysXMaterial *GetMaterial(const physx::PxBaseMaterial &material);
 		static physx::PxFoundation &GetFoundation();
 		static physx::PxPhysics &GetPhysics();
 		static physx::PxPvd &GetPVD();
@@ -134,8 +133,6 @@ namespace pragma::physics
 		virtual Bool RayCast(const TraceData &data,std::vector<TraceResult> *optOutResults=nullptr) const override;
 		virtual Bool Sweep(const TraceData &data,std::vector<TraceResult> *optOutResults=nullptr) const override;
 
-		physx::PxCooking &GetCooking();
-
 		template<class T,typename... TARGS>
 			PhysXUniquePtr<T> CreateUniquePtr(TARGS&& ...args);
 	private:
@@ -153,7 +150,6 @@ namespace pragma::physics
 		virtual RemainingDeltaTime DoStepSimulation(float timeStep,int maxSubSteps=1,float fixedTimeStep=(1.f /60.f)) override;
 		virtual void UpdateSurfaceTypes() override;
 
-		PhysXUniquePtr<physx::PxCooking> m_cooking = px_null_ptr<physx::PxCooking>();
 		PhysXUniquePtr<physx::PxScene> m_scene = px_null_ptr<physx::PxScene>();
 		PhysXUniquePtr<physx::PxControllerManager> m_controllerManager = px_null_ptr<physx::PxControllerManager>();
 		PhysXUniquePtr<physx::PxDefaultCpuDispatcher> m_cpuDispatcher = px_null_ptr<physx::PxDefaultCpuDispatcher>();

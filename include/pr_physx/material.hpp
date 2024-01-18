@@ -9,17 +9,13 @@
 #include <pragma/physics/phys_material.hpp>
 #include <memory>
 
-namespace physx
-{
+namespace physx {
 	class PxMaterial;
 };
-namespace pragma::physics
-{
+namespace pragma::physics {
 	class PhysXEnvironment;
-	class PhysXMaterial
-		: virtual public pragma::physics::IMaterial
-	{
-	public:
+	class PhysXMaterial : virtual public pragma::physics::IMaterial {
+	  public:
 		using Index = uint16_t;
 		friend PhysXEnvironment;
 		friend IEnvironment;
@@ -34,8 +30,8 @@ namespace pragma::physics
 		virtual void SetDynamicFriction(float friction) override;
 		virtual float GetRestitution() const override;
 		virtual void SetRestitution(float restitution) override;
-	private:
-		PhysXMaterial(IEnvironment &env,PhysXUniquePtr<physx::PxMaterial> material);
+	  private:
+		PhysXMaterial(IEnvironment &env, PhysXUniquePtr<physx::PxMaterial> material);
 		virtual void Initialize() override;
 		PhysXUniquePtr<physx::PxMaterial> m_material = px_null_ptr<physx::PxMaterial>();
 	};

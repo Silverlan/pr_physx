@@ -9,13 +9,11 @@
 #include "shape.hpp"
 #include "pr_physx/common.hpp"
 
-namespace physx
-{
+namespace physx {
 	class PxActor;
 	class PxRigidDynamic;
 };
-namespace pragma::physics
-{
+namespace pragma::physics {
 	class PhysXController;
 	class PhysXEnvironment;
 	class PhysXActorShape;
@@ -26,18 +24,17 @@ namespace pragma::physics
 	class PhysXShape;
 	class PhysXCollisionObject;
 	class PhysXRigidBody;
-	class PhysXActorShapeCollection
-	{
-	public:
+	class PhysXActorShapeCollection {
+	  public:
 		friend PhysXCollisionObject;
 		friend PhysXRigidBody;
 		PhysXActorShapeCollection(PhysXCollisionObject &colObj);
 		const std::vector<std::unique_ptr<PhysXActorShape>> &GetActorShapes() const;
 
-		PhysXActorShape *AttachShapeToActor(PhysXShape &shape,PhysXMaterial &mat,const umath::Transform &localPose={});
+		PhysXActorShape *AttachShapeToActor(PhysXShape &shape, PhysXMaterial &mat, const umath::Transform &localPose = {});
 		// Adds the shape to the shape list, but does not attach it to the
 		// actor. Assumes that it already has been attached to it!
-		PhysXActorShape *AddShape(PhysXShape &shape,physx::PxShape &actorShape);
+		PhysXActorShape *AddShape(PhysXShape &shape, physx::PxShape &actorShape);
 
 		void SetTrigger(bool bTrigger);
 		bool IsTrigger() const;
@@ -45,10 +42,10 @@ namespace pragma::physics
 		void ApplySurfaceMaterial(PhysXMaterial &mat);
 
 		void TransformLocalPose(const umath::Transform &t);
-		void CalcMassProps(float mass,Vector3 &centerOfMass);
-	private:
+		void CalcMassProps(float mass, Vector3 &centerOfMass);
+	  private:
 		void Clear();
-		PhysXActorShape *AddShape(PhysXShape &shape,physx::PxShape &actorShape,bool applyPose);
+		PhysXActorShape *AddShape(PhysXShape &shape, physx::PxShape &actorShape, bool applyPose);
 
 		// Contains one shape if created from a non-compound geometry,
 		// otherwise can contain more than one shape.
@@ -56,18 +53,16 @@ namespace pragma::physics
 		PhysXCollisionObject &m_collisionObject;
 	};
 
-	class PhysXCollisionObject
-		: virtual public pragma::physics::ICollisionObject
-	{
-	public:
+	class PhysXCollisionObject : virtual public pragma::physics::ICollisionObject {
+	  public:
 		friend IEnvironment;
 		static PhysXCollisionObject &GetCollisionObject(ICollisionObject &o);
 		static const PhysXCollisionObject &GetCollisionObject(const ICollisionObject &o);
-		PhysXCollisionObject(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape);
+		PhysXCollisionObject(IEnvironment &env, PhysXUniquePtr<physx::PxActor> actor, IShape &shape);
 		PhysXEnvironment &GetPxEnv() const;
 		physx::PxActor &GetInternalObject() const;
 		NoCollisionCategoryId DisableSelfCollisions();
-		virtual void GetAABB(Vector3 &min,Vector3 &max) const override;
+		virtual void GetAABB(Vector3 &min, Vector3 &max) const override;
 		virtual void SetSleepReportEnabled(bool reportEnabled) override;
 		virtual bool IsSleepReportEnabled() const override;
 
@@ -77,21 +72,18 @@ namespace pragma::physics
 		virtual void TransformLocalPose(const umath::Transform &t) override;
 
 		PhysXActorShapeCollection &GetActorShapeCollection() const;
-	protected:
+	  protected:
 		virtual void Initialize() override;
 		virtual void OnRemove() override;
 		virtual void RemoveWorldObject() override;
 		virtual void DoAddWorldObject() override;
 		mutable PhysXActorShapeCollection m_actorShapeCollection;
 		PhysXUniquePtr<NoCollisionCategory> m_noCollisionCategory = px_null_ptr<NoCollisionCategory>();
-	private:
+	  private:
 		PhysXUniquePtr<physx::PxActor> m_actor = px_null_ptr<physx::PxActor>();
 	};
-	class PhysXRigidBody
-		: virtual public pragma::physics::IRigidBody,
-		public PhysXCollisionObject
-	{
-	public:
+	class PhysXRigidBody : virtual public pragma::physics::IRigidBody, public PhysXCollisionObject {
+	  public:
 		friend IEnvironment;
 		physx::PxRigidActor &GetInternalObject() const;
 
@@ -116,16 +108,16 @@ namespace pragma::physics
 		virtual void SetCenterOfMassOffset(const Vector3 &offset) override;
 		virtual Vector3 GetCenterOfMassOffset() const override;
 
-		virtual void SetMassProps(float mass,const Vector3 &inertia) override;
+		virtual void SetMassProps(float mass, const Vector3 &inertia) override;
 
 		void SetController(PhysXController &controller);
 		PhysXController *GetController() const;
-	protected:
-		PhysXRigidBody(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape);
+	  protected:
+		PhysXRigidBody(IEnvironment &env, PhysXUniquePtr<physx::PxActor> actor, IShape &shape);
 		virtual void ApplyCollisionShape(pragma::physics::IShape *optShape) override;
 		virtual void RemoveWorldObject() override;
 		virtual void DoAddWorldObject() override;
-	private:
+	  private:
 		// Collision object
 		virtual void DoSetCollisionFilterGroup(CollisionMask group) override;
 		virtual void DoSetCollisionFilterMask(CollisionMask mask) override;
@@ -134,26 +126,24 @@ namespace pragma::physics
 		// The controller this body belongs to
 		mutable util::TWeakSharedHandle<PhysXController> m_controller = {};
 	};
-	class PhysXRigidDynamic
-		: public PhysXRigidBody
-	{
-	public:
+	class PhysXRigidDynamic : public PhysXRigidBody {
+	  public:
 		friend IEnvironment;
 		physx::PxRigidDynamic &GetInternalObject() const;
 		virtual void SetActivationState(ActivationState state) override;
 		virtual ActivationState GetActivationState() const override;
 		virtual bool IsStatic() const override;
 		virtual void SetStatic(bool b) override;
-		virtual void WakeUp(bool forceActivation=false) override;
+		virtual void WakeUp(bool forceActivation = false) override;
 		virtual void PutToSleep() override;
 
 		virtual void SetCCDEnabled(bool b) override;
-		virtual void ApplyForce(const Vector3 &force,bool autoWake=true) override;
-		virtual void ApplyForce(const Vector3 &force,const Vector3 &relPos,bool autoWake=true) override;
-		virtual void ApplyImpulse(const Vector3 &impulse,bool autoWake=true) override;
-		virtual void ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos,bool autoWake=true) override;
-		virtual void ApplyTorque(const Vector3 &torque,bool autoWake=true) override;
-		virtual void ApplyTorqueImpulse(const Vector3 &torque,bool autoWake=true) override;
+		virtual void ApplyForce(const Vector3 &force, bool autoWake = true) override;
+		virtual void ApplyForce(const Vector3 &force, const Vector3 &relPos, bool autoWake = true) override;
+		virtual void ApplyImpulse(const Vector3 &impulse, bool autoWake = true) override;
+		virtual void ApplyImpulse(const Vector3 &impulse, const Vector3 &relPos, bool autoWake = true) override;
+		virtual void ApplyTorque(const Vector3 &torque, bool autoWake = true) override;
+		virtual void ApplyTorqueImpulse(const Vector3 &torque, bool autoWake = true) override;
 		virtual void ClearForces() override;
 		virtual Vector3 GetTotalForce() const override;
 		virtual Vector3 GetTotalTorque() const override;
@@ -166,8 +156,8 @@ namespace pragma::physics
 		virtual Vector3 GetCenterOfMass() const override;
 		virtual Vector3 GetLinearVelocity() const override;
 		virtual Vector3 GetAngularVelocity() const override;
-		virtual void SetLinearVelocity(const Vector3 &vel,bool autoWake=true) override;
-		virtual void SetAngularVelocity(const Vector3 &vel,bool autoWake=true) override;
+		virtual void SetLinearVelocity(const Vector3 &vel, bool autoWake = true) override;
+		virtual void SetAngularVelocity(const Vector3 &vel, bool autoWake = true) override;
 		virtual void SetLinearFactor(const Vector3 &factor) override;
 		virtual void SetAngularFactor(const Vector3 &factor) override;
 		virtual Vector3 GetLinearFactor() const override;
@@ -186,31 +176,29 @@ namespace pragma::physics
 
 		virtual void SetKinematic(bool bKinematic) override;
 		virtual bool IsKinematic() const override;
-	protected:
-		PhysXRigidDynamic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape);
-	private:
+	  protected:
+		PhysXRigidDynamic(IEnvironment &env, PhysXUniquePtr<physx::PxActor> actor, IShape &shape);
+	  private:
 		virtual void ApplyCollisionShape(pragma::physics::IShape *optShape) override;
 	};
-	class PhysXRigidStatic
-		: public PhysXRigidBody
-	{
-	public:
+	class PhysXRigidStatic : public PhysXRigidBody {
+	  public:
 		friend IEnvironment;
 		physx::PxRigidStatic &GetInternalObject() const;
 		virtual void SetActivationState(ActivationState state) override;
 		virtual ActivationState GetActivationState() const override;
 		virtual bool IsStatic() const override;
 		virtual void SetStatic(bool b) override;
-		virtual void WakeUp(bool forceActivation=false) override;
+		virtual void WakeUp(bool forceActivation = false) override;
 		virtual void PutToSleep() override;
 
 		virtual void SetCCDEnabled(bool b) override;
-		virtual void ApplyForce(const Vector3 &force,bool autoWake=true) override;
-		virtual void ApplyForce(const Vector3 &force,const Vector3 &relPos,bool autoWake=true) override;
-		virtual void ApplyImpulse(const Vector3 &impulse,bool autoWake=true) override;
-		virtual void ApplyImpulse(const Vector3 &impulse,const Vector3 &relPos,bool autoWake=true) override;
-		virtual void ApplyTorque(const Vector3 &torque,bool autoWake=true) override;
-		virtual void ApplyTorqueImpulse(const Vector3 &torque,bool autoWake=true) override;
+		virtual void ApplyForce(const Vector3 &force, bool autoWake = true) override;
+		virtual void ApplyForce(const Vector3 &force, const Vector3 &relPos, bool autoWake = true) override;
+		virtual void ApplyImpulse(const Vector3 &impulse, bool autoWake = true) override;
+		virtual void ApplyImpulse(const Vector3 &impulse, const Vector3 &relPos, bool autoWake = true) override;
+		virtual void ApplyTorque(const Vector3 &torque, bool autoWake = true) override;
+		virtual void ApplyTorqueImpulse(const Vector3 &torque, bool autoWake = true) override;
 		virtual void ClearForces() override;
 		virtual Vector3 GetTotalForce() const override;
 		virtual Vector3 GetTotalTorque() const override;
@@ -223,8 +211,8 @@ namespace pragma::physics
 		virtual Vector3 GetCenterOfMass() const override;
 		virtual Vector3 GetLinearVelocity() const override;
 		virtual Vector3 GetAngularVelocity() const override;
-		virtual void SetLinearVelocity(const Vector3 &vel,bool autoWake=true) override;
-		virtual void SetAngularVelocity(const Vector3 &vel,bool autoWake=true) override;
+		virtual void SetLinearVelocity(const Vector3 &vel, bool autoWake = true) override;
+		virtual void SetAngularVelocity(const Vector3 &vel, bool autoWake = true) override;
 		virtual void SetLinearFactor(const Vector3 &factor) override;
 		virtual void SetAngularFactor(const Vector3 &factor) override;
 		virtual Vector3 GetLinearFactor() const override;
@@ -240,16 +228,13 @@ namespace pragma::physics
 
 		virtual void SetKinematic(bool bKinematic) override;
 		virtual bool IsKinematic() const override;
-	protected:
-		PhysXRigidStatic(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape);
+	  protected:
+		PhysXRigidStatic(IEnvironment &env, PhysXUniquePtr<physx::PxActor> actor, IShape &shape);
 	};
-	class PhysXSoftBody
-		: virtual public pragma::physics::ISoftBody,
-		public PhysXCollisionObject
-	{
-	public:
+	class PhysXSoftBody : virtual public pragma::physics::ISoftBody, public PhysXCollisionObject {
+	  public:
 		friend IEnvironment;
-		PhysXSoftBody(IEnvironment &env,PhysXUniquePtr<physx::PxActor> actor,IShape &shape);
+		PhysXSoftBody(IEnvironment &env, PhysXUniquePtr<physx::PxActor> actor, IShape &shape);
 		physx::PxActor &GetInternalObject() const;
 	};
 };
