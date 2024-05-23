@@ -9,6 +9,7 @@
 #include "pr_physx/controller.hpp"
 #include <extensions/PxRigidBodyExt.h>
 #include <pragma/util/util_game.hpp>
+#include <sharedutils/util_pragma.hpp>
 
 pragma::physics::PhysXCollisionObject &pragma::physics::PhysXCollisionObject::GetCollisionObject(ICollisionObject &o) { return *static_cast<PhysXCollisionObject *>(o.GetUserData()); }
 const pragma::physics::PhysXCollisionObject &pragma::physics::PhysXCollisionObject::GetCollisionObject(const ICollisionObject &o) { return GetCollisionObject(const_cast<ICollisionObject &>(o)); }

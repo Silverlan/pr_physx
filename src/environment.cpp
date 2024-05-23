@@ -17,6 +17,7 @@
 #include "pr_physx/sim_event_callback.hpp"
 #include "pr_physx/sim_filter_shader.hpp"
 #include <sharedutils/util.h>
+#include <sharedutils/util_pragma.hpp>
 #include <pragma/math/surfacematerial.h>
 #include <mathutil/transform.hpp>
 #include <pragma/physics/visual_debugger.hpp>
