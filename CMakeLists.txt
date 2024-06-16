@@ -1,32 +1,24 @@
-cmake_minimum_required(VERSION 3.12)
-
-include("../CMakeShared.txt")
+include(${CMAKE_SOURCE_DIR}/cmake/pr_common.cmake)
 
 set(PROJ_NAME pr_physx)
+pr_add_library(${PROJ_NAME} SHARED)
 
-project(${PROJ_NAME} CXX)
+pr_add_dependency(${PROJ_NAME} shared TARGET PUBLIC)
 
-# set(PRECOMPILED_HEADER "stdafx")
+pr_set_include_path(physx "${CMAKE_CURRENT_LIST_DIR}/third_party/physx/physx/include" FORCE)
+pr_set_include_path(physx_shared "${CMAKE_CURRENT_LIST_DIR}/third_party/physx/pxshared/include" FORCE)
 
-link_external_library(physx)
-add_external_library(physx_extensions)
-add_external_library(physx_foundation)
-add_external_library(physx_vehicle)
-add_external_library(physx_common)
-add_external_library(physx_character_kinematic)
-add_external_library(physx_cooking)
-add_external_library(physx_pvd)
-add_include_dir(physx_shared)
-add_include_dir(glm)
+pr_add_external_dependency(${PROJ_NAME} physx LIBRARY)
+pr_add_external_dependency(${PROJ_NAME} physx_extensions LIBRARY LINK_ONLY)
+pr_add_external_dependency(${PROJ_NAME} physx_foundation LIBRARY LINK_ONLY)
+pr_add_external_dependency(${PROJ_NAME} physx_vehicle LIBRARY LINK_ONLY)
+pr_add_external_dependency(${PROJ_NAME} physx_common LIBRARY LINK_ONLY)
+pr_add_external_dependency(${PROJ_NAME} physx_character_kinematic LIBRARY LINK_ONLY)
+pr_add_external_dependency(${PROJ_NAME} physx_cooking LIBRARY LINK_ONLY)
+pr_add_external_dependency(${PROJ_NAME} physx_pvd LIBRARY LINK_ONLY)
+pr_add_external_dependency(${PROJ_NAME} physx_shared HEADER_ONLY)
 
-set(DEPENDENCY_PHYSX_INCLUDE ${CMAKE_CURRENT_LIST_DIR}/third_party/physx/physx/include CACHE PATH "" FORCE)
-set(DEPENDENCY_PHYSX_SHARED_INCLUDE ${CMAKE_CURRENT_LIST_DIR}/third_party/physx/pxshared/include CACHE PATH "" FORCE)
+pr_add_headers(${PROJ_NAME} "include/")
+pr_add_sources(${PROJ_NAME} "src/")
 
-link_generic_module_libraries()
-register_pragma_module(${PROJ_NAME})
-
-#
-
-set_target_properties(pr_physx PROPERTIES FOLDER modules/physics/physx)
-
-set_property(GLOBAL PROPERTY PRAGMA_MODULE_SKIP_TARGET_PROPERTY_FOLDER 1)
+pr_finalize(${PROJ_NAME} FOLDER "modules/physics/physx")
