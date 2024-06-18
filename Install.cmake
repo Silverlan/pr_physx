@@ -1,10 +1,7 @@
 set(INSTALL_PATH "modules/physics_engines/physx/")
 pr_install_create_directory("${INSTALL_PATH}")
 pr_install_targets(pr_physx INSTALL_DIR "${INSTALL_PATH}")
-pr_install_files(
-    "${DEPENDENCY_PHYSX_LIBRARY}"
-    "${DEPENDENCY_PHYSX_COMMON_LIBRARY}"
-    "${DEPENDENCY_PHYSX_COOKING_LIBRARY}"
-    "${DEPENDENCY_PHYSX_FOUNDATION_LIBRARY}"
-    INSTALL_DIR "${INSTALL_PATH}"
-)
+pr_install_binary(physx WIN "PhysX_64.dll" LIN "libPhysX_64.so" INSTALL_DIR "${INSTALL_PATH}")
+pr_install_binary(physx_common WIN "PhysXCommon_64.dll" LIN "libPhysXCommon_64.so" INSTALL_DIR "${INSTALL_PATH}")
+pr_install_binary(physx_cooking WIN "PhysXCooking_64.dll" LIN "libPhysXCooking_64.so" INSTALL_DIR "${INSTALL_PATH}")
+pr_install_binary(physx_foundation WIN "PhysXFoundation_64.dll" LIN "lib.so" INSTALL_DIR "${INSTALL_PATH}")
