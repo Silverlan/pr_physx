@@ -1,0 +1,6 @@
+{
+    "name": "PhysX",
+    "module_name": "pr_physx",
+    "install_directory": "modules/physics_engines/physx/",
+    "release_directory": "modules/physics_engines/physx/"
+}
