@@ -12,7 +12,7 @@ void pragma::physics::PhysXEnvironment::UpdateSurfaceTypes()
 	auto &tireTypeManager = GetTireTypeManager();
 	auto &tireTypes = tireTypeManager.GetRegisteredTypes();
 	auto *game = GetNetworkState().GetGameState();
-	auto &surfMats = game->GetSurfaceMaterials();
+	auto &surfMats = *game->GetSurfaceMaterials();
 
 	std::vector<physx::PxVehicleDrivableSurfaceType> surfacesTypes {};
 	std::vector<const physx::PxMaterial *> physMats {};
