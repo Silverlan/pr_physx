@@ -334,7 +334,7 @@ void pragma::physics::PhysXRigidDynamic::SetMassAndUpdateInertia(float mass) { p
 Vector3 pragma::physics::PhysXRigidDynamic::GetInertia()
 {
 	auto inertiaTensor = static_cast<physx::PxRigidBody &>(GetInternalObject()).getMassSpaceInertiaTensor();
-	return GetPxEnv().FromPhysXVector(inertiaTensor * umath::pow2(util::pragma::units_to_metres(1.f)));
+	return GetPxEnv().FromPhysXVector(inertiaTensor * umath::pow2(pragma::units_to_metres(1.f)));
 }
 Mat3 pragma::physics::PhysXRigidDynamic::GetInvInertiaTensorWorld() const
 {
@@ -344,7 +344,7 @@ Mat3 pragma::physics::PhysXRigidDynamic::GetInvInertiaTensorWorld() const
 }
 void pragma::physics::PhysXRigidDynamic::SetInertia(const Vector3 &inertia)
 {
-	auto inertiaTensor = GetPxEnv().ToPhysXVector(inertia) / umath::pow2(util::pragma::units_to_metres(1.f));
+	auto inertiaTensor = GetPxEnv().ToPhysXVector(inertia) / umath::pow2(pragma::units_to_metres(1.f));
 	static_cast<physx::PxRigidBody &>(GetInternalObject()).setMassSpaceInertiaTensor(inertiaTensor);
 }
 Vector3 pragma::physics::PhysXRigidDynamic::GetCenterOfMass() const { return GetPxEnv().FromPhysXVector(GetInternalObject().getCMassLocalPose().p); }

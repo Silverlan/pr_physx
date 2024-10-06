@@ -162,7 +162,7 @@ static void setupWheelsSimulationData(pragma::physics::PhysXEnvironment &env, co
 		physx::PxVec3 suspForceAppCMOffset;
 		physx::PxVec3 tireForceAppCMOffset;
 	};
-	constexpr auto scale = util::pragma::metres_to_units(1.f);
+	constexpr auto scale = pragma::metres_to_units(1.f);
 	std::vector<WheelData> wheels {};
 	wheels.reserve(vhcCreateInfo.wheels.size());
 	std::vector<physx::PxVec3> wheelCenterActorOffsets;
@@ -271,7 +271,7 @@ static pragma::physics::PhysXUniquePtr<physx::PxVehicleDrive> createVehicle4W(pr
 {
 	const physx::PxU32 numWheels = vhcCreateInfo.wheels.size();
 
-	constexpr auto scale = util::pragma::metres_to_units(1.f);
+	constexpr auto scale = pragma::metres_to_units(1.f);
 
 	//Construct a physx actor with shapes for the chassis and wheels.
 	//Set the rigid body mass, moment of inertia, and center of mass offset.
@@ -389,7 +389,7 @@ util::TSharedHandle<pragma::physics::IVehicle> pragma::physics::PhysXEnvironment
 		return nullptr; // Can occur if vehicle is mis-configured (check checked PhysX build)
 
 	//Convert the vehicle from meters to the chosen length scale.
-	constexpr auto scale = util::pragma::metres_to_units(1.f);
+	constexpr auto scale = pragma::metres_to_units(1.f);
 	customizeVehicleToLengthScale(scale, *gVehicle4W->getRigidDynamicActor(), gVehicle4W->mWheelsSimData, gVehicle4W->mDriveSimData);
 
 	//Convert the steer angle vs forward speed table to the chosen length scale.

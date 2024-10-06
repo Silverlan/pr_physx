@@ -167,7 +167,7 @@ bool pragma::physics::PhysXEnvironment::Initialize()
 	auto bEnableDebugging = g_pxPvd != nullptr;
 
 	physx::PxTolerancesScale scale;
-	scale.length = util::pragma::metres_to_units(1);
+	scale.length = pragma::metres_to_units(1);
 	scale.speed = 600.f;
 	if(g_pxPhysics == nullptr) {
 		g_pxPhysics = px_create_unique_ptr(PxCreatePhysics(PX_PHYSICS_VERSION, *g_pxFoundation, scale, bEnableDebugging, g_pxPvd.get()));
@@ -262,7 +262,7 @@ physx::PxVehicleDrivableSurfaceToTireFrictionPairs &pragma::physics::PhysXEnviro
 physx::PxScene &pragma::physics::PhysXEnvironment::GetScene() const { return *m_scene; }
 double pragma::physics::PhysXEnvironment::ToPhysXLength(double len) const { return len; }
 double pragma::physics::PhysXEnvironment::FromPhysXLength(double len) const { return len; }
-float pragma::physics::PhysXEnvironment::FromPhysXMass(float mass) const { return mass * umath::pow3(util::pragma::units_to_metres(1.f)); }
+float pragma::physics::PhysXEnvironment::FromPhysXMass(float mass) const { return mass * umath::pow3(pragma::units_to_metres(1.f)); }
 
 const Color &pragma::physics::PhysXEnvironment::FromPhysXColor(uint32_t color)
 {
